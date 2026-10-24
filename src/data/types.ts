@@ -1,0 +1,14 @@
+import type { Database } from '@/integrations/supabase/types';
+export type { Database };
+export type Row<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
+export type Insert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
+export type Party = Database['public']['Enums']['party_type'];
+export type BookingStatus = Database['public']['Enums']['booking_status'];
+export type Artist = Row<'artists'>;
+export type Venue = Row<'venues'>;
+export type Availability = Row<'availability'>;
+export type Message = Row<'messages'>;
+export type Suggestion = Row<'suggestions'> & { artists: Artist | null };
+export type Booking = Omit<Row<'bookings'>, 'status'> & { status: BookingStatus; artists: Artist | null; venues: Venue | null };
+export type Thread = Row<'threads'> & { artists: Artist | null; venues: Venue | null; messages: Message[] };
+export type ReviewInput = { verdict: 'verified' | 'rejected'; room_fit: string[]; note: string };

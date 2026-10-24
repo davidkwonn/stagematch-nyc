@@ -1,22 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { createArtist, createVenue } from "@/data/profiles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { GenrePicker } from "@/components/GenrePicker";
+import { pageHead } from "@/data/metadata";
 import { BOROUGHS, VENUE_TYPES } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
-  head: () => ({
-    meta: [
-      { title: "Set up your profile — Stagehand" },
-      { name: "description", content: "Tell us about your act or your venue." },
-    ],
-  }),
+  head: () => pageHead("Set up your profile", "Tell us about your act or your NYC venue."),
   component: Onboarding,
 });
 
@@ -36,23 +32,22 @@ function getVideoDuration(file: File) {
 }
 
 function Onboarding() {
-  const [role, setRole] = useState<"artist" | "venue" | null>(
-    () => (typeof window !== "undefined" ? (sessionStorage.getItem("stagehand-role") as "artist" | "venue" | null) : null),
-  );
+  const [role, setRole] = useState<"artist" | "venue" | null>(null);
+  useEffect(() => { const saved = sessionStorage.getItem("stagehand-role"); if (saved === "artist" || saved === "venue") setRole(saved); }, []);
 
   if (!role) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
+      <div className="app-page">
         <h1 className="font-display text-6xl">Who are you?</h1>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <button onClick={() => setRole("artist")} className="poster -rotate-1 bg-primary p-8 text-left text-primary-foreground">
+          <Button onClick={() => setRole("artist")} className="poster -rotate-1 bg-primary p-8 text-left text-primary-foreground">
             <div className="font-display text-4xl">Artist</div>
             <p className="mt-2">I play music and want paid gigs.</p>
-          </button>
-          <button onClick={() => setRole("venue")} className="poster rotate-1 bg-secondary p-8 text-left text-secondary-foreground">
+          </Button>
+          <Button onClick={() => setRole("venue")} className="poster rotate-1 bg-secondary p-8 text-left text-secondary-foreground">
             <div className="font-display text-4xl">Venue</div>
             <p className="mt-2">I run a bar, club or music room and want live acts.</p>
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -67,6 +62,8 @@ function ArtistForm() {
   const [birthday, setBirthday] = useState("");
   const [background, setBackground] = useState("");
   const [genres, setGenres] = useState<string[]>([]);
+  const [borough, setBorough] = useState("Brooklyn");
+  const [phone, setPhone] = useState("");
   const [video, setVideo] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -86,25 +83,10 @@ function ArtistForm() {
     if (!video) { toast.error("Add a ~30 second video of you playing."); return; }
     setBusy(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
-      const user = u.user!;
-      const ext = video.name.split(".").pop() || "mp4";
-      const path = `${user.id}/clip-${Date.now()}.${ext}`;
-      const up = await supabase.storage.from("artist-videos").upload(path, video, { contentType: video.type });
-      if (up.error) throw up.error;
-      const { error } = await supabase.from("artists").insert({
-        user_id: user.id,
-        name,
-        birthday,
-        background,
-        genres,
-        video_path: path,
-        email: user.email ?? null,
-      });
-      if (error) throw error;
+      await createArtist({ name, birthday, background, genres, borough, phone }, video);
       await qc.invalidateQueries({ queryKey: ["me"] });
       toast.success("You're on the wall!");
-      navigate({ to: "/profile" });
+      navigate({ to: "/intake" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save");
     } finally {
@@ -113,7 +95,7 @@ function ArtistForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-6 px-4 py-12">
+    <form onSubmit={submit} className="app-page mx-auto max-w-4xl space-y-6">
       <h1 className="font-display text-6xl">Your act</h1>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
@@ -124,6 +106,10 @@ function ArtistForm() {
           <Label>Birthday</Label>
           <Input required type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} />
         </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1"><Label>Borough</Label><select aria-label="Borough" className={selectCls} value={borough} onChange={e=>setBorough(e.target.value)}>{BOROUGHS.map(b=><option key={b}>{b}</option>)}</select></div>
+        <div className="space-y-1"><Label>Phone</Label><Input aria-label="Phone" required type="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></div>
       </div>
       <div className="space-y-1">
         <Label>Your background</Label>
@@ -158,11 +144,9 @@ function VenueForm() {
     if (!genres.length) { toast.error("Pick at least one music type you want."); return; }
     setBusy(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("venues").insert({ ...f, genres, user_id: u.user!.id });
-      if (error) throw error;
+      await createVenue({ ...f, genres });
       await qc.invalidateQueries({ queryKey: ["me"] });
-      navigate({ to: "/discover" });
+      navigate({ to: "/intake" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save");
     } finally {
@@ -171,7 +155,7 @@ function VenueForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-6 px-4 py-12">
+    <form onSubmit={submit} className="app-page mx-auto max-w-4xl space-y-6">
       <h1 className="font-display text-6xl">Your venue</h1>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">

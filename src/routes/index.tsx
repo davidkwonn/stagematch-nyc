@@ -12,6 +12,8 @@ export const Route = createFileRoute("/")({
         name: "description",
         content: "NYC artists post a 30-second clip. Venues swipe, claim, and an AI manager sets up the paid gig.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:title", content: "Stagehand — Get booked at NYC bars & venues" },
       {
         property: "og:description",
