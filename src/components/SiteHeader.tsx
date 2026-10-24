@@ -1,55 +1,13 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { meQuery } from "@/lib/queries";
-import { Button } from "@/components/ui/button";
-
-export function SiteHeader() {
-  const { data } = useQuery(meQuery);
-  const navigate = useNavigate();
-  const signedIn = !!data?.user;
-
-  return (
-    <header className="sticky top-0 z-30 border-b-2 border-foreground bg-background/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link to="/" className="font-display text-2xl text-foreground">
-          Stage<span className="text-primary">hand</span>
-          <span className="ml-2 align-middle font-sans text-[10px] tracking-widest text-secondary">NYC</span>
-        </Link>
-        <nav className="flex items-center gap-2 text-sm">
-          {signedIn ? (
-            <>
-              {data?.venue && (
-                <Link to="/discover" className="px-2 py-1 font-bold uppercase hover:text-primary">
-                  Discover
-                </Link>
-              )}
-              {data?.artist && (
-                <Link to="/profile" className="px-2 py-1 font-bold uppercase hover:text-primary">
-                  My profile
-                </Link>
-              )}
-              <Link to="/bookings" className="px-2 py-1 font-bold uppercase hover:text-primary">
-                Bookings
-              </Link>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate({ to: "/" });
-                }}
-              >
-                Sign out
-              </Button>
-            </>
-          ) : (
-            <Button asChild size="sm" variant="poster">
-              <Link to="/auth" search={{ as: undefined }}>Sign in</Link>
-            </Button>
-          )}
-        </nav>
-      </div>
-    </header>
-  );
+import { Link, useNavigate, useLocation } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
+import { Home, CalendarDays, MessageCircle, UserRound, LogOut, Radio, ArrowUpRight } from 'lucide-react';
+import { meQuery, signOut } from '@/data/profiles';
+import { Button } from '@/components/ui/button';
+import mack from '@/assets/mack.jpg';
+const items=[{to:'/home',label:'Home',icon:Home},{to:'/calendar',label:'Calendar',icon:CalendarDays},{to:'/inbox',label:'Inbox',icon:MessageCircle},{to:'/profile',label:'Profile',icon:UserRound}] as const;
+export function SiteHeader(){
+ const{data}=useQuery(meQuery);const navigate=useNavigate();const{pathname}=useLocation();
+ const app=pathname!=='/'&&pathname!=='/auth';
+ if(!app)return <header className="border-b-2 border-foreground"><div className="mx-auto flex max-w-6xl items-center justify-between p-4"><Link to="/" className="font-display text-3xl">Stage<span className="text-primary">hand</span><span className="ml-2 text-xs text-secondary">NYC</span></Link><div className="flex gap-2"><Button asChild variant="ghost"><Link to="/live"><Radio className="size-4"/>Live</Link></Button><Button asChild variant="poster"><Link to={data?.user?'/home':'/auth'} search={{as:undefined}}>{data?.user?'Open Stagehand':'Sign in'}<ArrowUpRight className="size-4"/></Link></Button></div></div></header>;
+ return <><header className="app-sidebar"><Link to="/home" className="font-display text-3xl">Stage<span className="text-primary">hand</span><span className="ml-2 text-xs text-secondary">NYC</span></Link><div className="mt-10 hidden md:block"><span className="text-xs font-bold uppercase text-muted-foreground">Your backstage</span><nav className="mt-4 space-y-2">{items.map(({to,label,icon:Icon})=><Button key={to} asChild variant={pathname.startsWith(to)?'acid':'ghost'} className="h-12 w-full justify-start gap-3"><Link to={to}><Icon className="size-5"/>{label}</Link></Button>)}</nav></div><div className="mt-auto hidden space-y-4 md:block"><div className="border-t border-border pt-5"><p className="font-bold">{data?.artist?.name??data?.venue?.name??'Your next gig awaits'}</p><p className="mt-1 text-xs text-muted-foreground">{data?.artist?'Artist':data?.venue?'Venue':'Stagehand'} · New York City</p></div><Button variant="ghost" className="justify-start" onClick={async()=>{await signOut();navigate({to:'/'});}}><LogOut className="size-4"/>Sign out</Button><Link to="/live" className="flex min-h-11 items-center gap-2 text-xs text-muted-foreground"><Radio className="size-4 text-mint"/>Stagehand live<ArrowUpRight className="size-3"/></Link></div><img src={mack} alt="Mack" width={36} height={36} className="size-9 rounded-full md:hidden"/></header><nav aria-label="Main navigation" className="app-tabs">{items.map(({to,label,icon:Icon})=><Button key={to} asChild variant="ghost" className={`h-14 flex-1 flex-col gap-1 px-1 text-[11px] ${pathname.startsWith(to)?'text-secondary':'text-muted-foreground'}`}><Link to={to}><Icon className="size-5"/>{label}</Link></Button>)}</nav></>;
 }
