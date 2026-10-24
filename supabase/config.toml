@@ -16,3 +16,10 @@ verify_jwt = false
 # Called by Mack server-side with a service key (may be a non-JWT sb_secret_ key); the function checks callers itself.
 [functions.terac-submit]
 verify_jwt = false
+
+# Outreach: cron (x-cron-secret), Mack/admin server calls (service key) and the public opt-out link; the functions check callers themselves.
+[functions.outreach-run]
+verify_jwt = false
+
+[functions.outreach-optout]
+verify_jwt = false
