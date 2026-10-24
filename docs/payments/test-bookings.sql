@@ -5,9 +5,8 @@
 -- Replace the two emails with the venue and artist accounts used on the phone.
 -- The statement returns 2 rows; 0 rows means an email didn't match.
 --
--- The UI's It happened / No-show buttons show only when the gig date is before today
--- (canReportGig in src/data/rules.ts). Until that is aligned with gig-outcome (which accepts
--- a payout once the show's end has passed), use interval '1 day' below instead of '2 hours'.
+-- The It happened / No-show buttons show from the gig day once PR #3 is merged; before that
+-- they show only the day after the gig, so use interval '1 day' below instead of '2 hours'.
 
 with v as (select id from venues where email = 'VENUE_EMAIL'),
 a as (select id from artists where email = 'ARTIST_EMAIL'),
