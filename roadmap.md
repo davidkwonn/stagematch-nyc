@@ -7,5 +7,5 @@
 - [x] Rule tests and signed-in artist intake → calendar → inbox follow-up checks; 360px layout checks.
 - [x] Handoff documentation for schema compatibility, samples and payment integration limitations.
 - [ ] Exact destructive schema replacement: blocked by live-schema compatibility permissions; legacy fields retained and documented.
-- [ ] Venue matching → two-party confirmation end-to-end verification: needs authorized access to a venue account; artist account verified.
+- [x] Venue swipe deck → artist profile → confirm → 3-way Mack group chat, verified in browser; booking offer bug fixed; Mack prompts for Google Meet call then in-person gig.
 - [ ] Real checkout, release/refund and trusted voice turns: waiting for teammate payment/voice connections as described in handoff.
