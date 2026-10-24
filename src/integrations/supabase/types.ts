@@ -634,6 +634,10 @@ export type Database = {
         Args: { _id: string; _type: Database["public"]["Enums"]["party_type"] }
         Returns: boolean
       }
+      settle_booking_confirmation: {
+        Args: { _booking_id: string; _decline?: boolean }
+        Returns: string
+      }
     }
     Enums: {
       availability_kind: "date" | "weekly"

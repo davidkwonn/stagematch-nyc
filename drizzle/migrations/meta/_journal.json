@@ -15,6 +15,13 @@
       "when": 1792864872738,
       "tag": "0001_stagehand_hackathon_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792864981637,
+      "tag": "0002_atomic_booking_confirmation",
+      "breakpoints": true
     }
   ]
 }
