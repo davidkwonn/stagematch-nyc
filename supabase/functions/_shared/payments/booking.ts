@@ -51,29 +51,43 @@ export async function moveBooking(bookingId: string, from: string, to: string) {
   return Boolean(data);
 }
 
+// Returns the updated payment, or null when it was not in `from`.
 export async function setPaymentStatus(bookingId: string, from: string, to: string, extra: Record<string, unknown> = {}) {
   const { data, error } = await db.from('payments').update({ status: to, updated_at: new Date().toISOString(), ...extra })
-    .eq('booking_id', bookingId).eq('status', from).select('id').maybeSingle();
+    .eq('booking_id', bookingId).eq('status', from).select('amount_usd, payout_usd').maybeSingle();
   if (error) throw error;
-  return Boolean(data);
+  return data as { amount_usd: number; payout_usd: number } | null;
+}
+
+// Claims a held payment for one payout attempt (compare-and-set on updated_at), so two
+// attempts can't pay the artist at once. Returns the claim stamp, or null if someone else holds it.
+export async function leasePayment(bookingId: string, seenUpdatedAt: string) {
+  const stamp = new Date().toISOString();
+  const { data, error } = await db.from('payments').update({ updated_at: stamp })
+    .eq('booking_id', bookingId).eq('status', 'held').eq('updated_at', seenUpdatedAt).select('id').maybeSingle();
+  if (error) throw error;
+  return data ? stamp : null;
 }
 
 // Payment received (Whop webhook, or WHOP_SIMULATE in whop-checkout): payment held, booking paid_held.
-// Returns false when it was already recorded.
+// Mack tells the artist exactly what is secured for them. Returns false when it was already recorded.
 export async function markHeld(bookingId: string, whopPaymentId: string | null, detail: Record<string, unknown> = {}) {
-  if (!await setPaymentStatus(bookingId, 'pending', 'held', { whop_payment_id: whopPaymentId })) return false;
+  const payment = await setPaymentStatus(bookingId, 'pending', 'held', { whop_payment_id: whopPaymentId });
+  if (!payment) return false;
   const moved = await moveBooking(bookingId, 'confirmed', 'paid_held');
   const booking = await loadBooking(bookingId);
   if (!moved) {
-    await log('payments', 'payment_held_needs_review', { booking_id: bookingId, booking_status: booking.status, whop_payment_id: whopPaymentId, ...detail });
+    await log('payments', 'payment_held_needs_review', { booking_id: bookingId, booking_status: booking.status, whop_payment_id: whopPaymentId, needs_human: true, ...detail });
     return true;
   }
   await log('payments', 'payment_held', { booking_id: bookingId, whop_payment_id: whopPaymentId, ...detail });
   const threadId = await bookingThreadId(bookingId);
   if (threadId) {
     await postAgentMessage(threadId,
-      `Payment received and held. You're booked for ${when(booking.gig_date, booking.start_time)}. ` +
-      `I'll release ${booking.artist.name}'s pay after the show.`);
+      `Payment received: ${booking.venue.name} paid ${usd(payment.amount_usd)} and Stagehand is holding it until the show` +
+      `${whopPaymentId ? '' : ' (demo mode: no real money moved)'}. ${booking.artist.name}, your ${usd(payment.payout_usd)} ` +
+      `is secured: it goes to you as soon as ${booking.venue.name} confirms the gig. You're booked for ` +
+      `${when(booking.gig_date, booking.start_time)}.`);
   }
   return true;
 }

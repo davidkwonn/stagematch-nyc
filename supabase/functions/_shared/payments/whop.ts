@@ -62,7 +62,9 @@ export async function refundPayment(paymentId: string, bookingId: string) {
 
 // Artists have no Whop account in our schema, so the payout is a claim link they open to collect.
 // Anyone holding the link can claim it: share it only where the artist alone can read it.
-export async function createPayoutLink(amountUsd: number, bookingId: string, days = 14) {
+// `attempt` keys the request per payout attempt: the SDK's own retries reuse it, a later
+// attempt after a refusal (e.g. funds not cleared yet) gets a fresh one.
+export async function createPayoutLink(amountUsd: number, bookingId: string, attempt: string, days = 14) {
   const link = await whop().transfers.create(
     {
       type: 'claim_link',
@@ -70,7 +72,7 @@ export async function createPayoutLink(amountUsd: number, bookingId: string, day
       origin_id: companyId(),
       expires_at: new Date(Date.now() + days * 86_400_000).toISOString(),
     },
-    { idempotencyKey: `payout-${bookingId}` },
+    { idempotencyKey: `payout-${bookingId}-${attempt}` },
   );
   if (link.object !== 'claim_link') throw new Error(`unexpected transfer object: ${link.object}`);
   return { id: link.id, url: link.claim_url, expiresAt: link.expires_at };
