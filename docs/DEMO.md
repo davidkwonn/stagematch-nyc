@@ -12,7 +12,7 @@ Dry runs at 16:00 and 17:00. Fix only what breaks the happy path. Keep `/live` o
 ## 2. Before the demo (checklist)
 
 1. **Review-token hole: closed.** Lovable's migration `0003_vetting_privacy` is applied.
-2. **Terac: live.** Opportunity `lb6fo5yxd9rghj2fnhc4i98a` was launched at 15:50 for $18. One NYC booker reviews 5 artists on `https://gigmatch-nyc-stage.lovable.app/review/<token>`, and verdicts land on the artist through the review page. When the booker finishes, approve the submission so they get paid:
+2. **Terac: live.** Opportunity `lb6fo5yxd9rghj2fnhc4i98a` was launched for $18. One NYC booker reviews 5 artists on `https://gigmatch-nyc-stage.lovable.app/review/<token>`, and verdicts land on the artist through the review page. When the booker finishes, approve the submission so they get paid:
    ```bash
    npx -y deno@2 run -A --env-file=.env.local scripts/terac-launch.ts submissions lb6fo5yxd9rghj2fnhc4i98a
    npx -y deno@2 run -A --env-file=.env.local scripts/terac-launch.ts approve <submission_id>
