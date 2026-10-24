@@ -14,10 +14,13 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated/intake'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings.index'
 import { Route as AuthenticatedBookingsIdRouteImport } from './routes/_authenticated/bookings.$id'
+import { Route as AuthenticatedInboxIdRouteImport } from './routes/_authenticated/inbox.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,6 +46,16 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIntakeRoute = AuthenticatedIntakeRouteImport.update({
+  id: '/intake',
+  path: '/intake',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -64,15 +77,23 @@ const AuthenticatedBookingsIdRoute = AuthenticatedBookingsIdRouteImport.update({
   path: '/bookings/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInboxIdRoute = AuthenticatedInboxIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedInboxRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/inbox': typeof AuthenticatedInboxRouteWithChildren
+  '/intake': typeof AuthenticatedIntakeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
+  '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -80,9 +101,12 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/inbox': typeof AuthenticatedInboxRouteWithChildren
+  '/intake': typeof AuthenticatedIntakeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
+  '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
 }
 export interface FileRoutesById {
@@ -92,9 +116,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
+  '/_authenticated/inbox': typeof AuthenticatedInboxRouteWithChildren
+  '/_authenticated/intake': typeof AuthenticatedIntakeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/bookings/$id': typeof AuthenticatedBookingsIdRoute
+  '/_authenticated/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -104,9 +131,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/home'
+    | '/inbox'
+    | '/intake'
     | '/onboarding'
     | '/profile'
     | '/bookings/$id'
+    | '/inbox/$id'
     | '/bookings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -114,9 +144,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/home'
+    | '/inbox'
+    | '/intake'
     | '/onboarding'
     | '/profile'
     | '/bookings/$id'
+    | '/inbox/$id'
     | '/bookings'
   id:
     | '__root__'
@@ -125,9 +158,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/discover'
     | '/_authenticated/home'
+    | '/_authenticated/inbox'
+    | '/_authenticated/intake'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
     | '/_authenticated/bookings/$id'
+    | '/_authenticated/inbox/$id'
     | '/_authenticated/bookings/'
   fileRoutesById: FileRoutesById
 }
@@ -174,6 +210,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/intake': {
+      id: '/_authenticated/intake'
+      path: '/intake'
+      fullPath: '/intake'
+      preLoaderRoute: typeof AuthenticatedIntakeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/onboarding': {
       id: '/_authenticated/onboarding'
       path: '/onboarding'
@@ -202,12 +252,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBookingsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/inbox/$id': {
+      id: '/_authenticated/inbox/$id'
+      path: '/$id'
+      fullPath: '/inbox/$id'
+      preLoaderRoute: typeof AuthenticatedInboxIdRouteImport
+      parentRoute: typeof AuthenticatedInboxRoute
+    }
   }
 }
+
+interface AuthenticatedInboxRouteChildren {
+  AuthenticatedInboxIdRoute: typeof AuthenticatedInboxIdRoute
+}
+
+const AuthenticatedInboxRouteChildren: AuthenticatedInboxRouteChildren = {
+  AuthenticatedInboxIdRoute: AuthenticatedInboxIdRoute,
+}
+
+const AuthenticatedInboxRouteWithChildren =
+  AuthenticatedInboxRoute._addFileChildren(AuthenticatedInboxRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRouteWithChildren
+  AuthenticatedIntakeRoute: typeof AuthenticatedIntakeRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedBookingsIdRoute: typeof AuthenticatedBookingsIdRoute
@@ -217,6 +287,8 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
+  AuthenticatedInboxRoute: AuthenticatedInboxRouteWithChildren,
+  AuthenticatedIntakeRoute: AuthenticatedIntakeRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedBookingsIdRoute: AuthenticatedBookingsIdRoute,
