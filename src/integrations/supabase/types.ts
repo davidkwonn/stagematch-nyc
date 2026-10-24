@@ -14,13 +14,212 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      artists: {
+        Row: {
+          background: string
+          birthday: string
+          created_at: string
+          email: string | null
+          genres: string[]
+          id: string
+          name: string
+          user_id: string
+          video_path: string | null
+        }
+        Insert: {
+          background?: string
+          birthday: string
+          created_at?: string
+          email?: string | null
+          genres?: string[]
+          id?: string
+          name: string
+          user_id: string
+          video_path?: string | null
+        }
+        Update: {
+          background?: string
+          birthday?: string
+          created_at?: string
+          email?: string | null
+          genres?: string[]
+          id?: string
+          name?: string
+          user_id?: string
+          video_path?: string | null
+        }
+        Relationships: []
+      }
+      booking_messages: {
+        Row: {
+          booking_id: string
+          content: string
+          created_at: string
+          id: string
+          sender_id: string | null
+          sender_role: string
+        }
+        Insert: {
+          booking_id: string
+          content: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_role: string
+        }
+        Update: {
+          booking_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          artist_confirmed: boolean
+          artist_id: string
+          created_at: string
+          gig_date: string | null
+          id: string
+          offer_amount: number
+          status: string
+          venue_confirmed: boolean
+          venue_id: string
+        }
+        Insert: {
+          artist_confirmed?: boolean
+          artist_id: string
+          created_at?: string
+          gig_date?: string | null
+          id?: string
+          offer_amount: number
+          status?: string
+          venue_confirmed?: boolean
+          venue_id: string
+        }
+        Update: {
+          artist_confirmed?: boolean
+          artist_id?: string
+          created_at?: string
+          gig_date?: string | null
+          id?: string
+          offer_amount?: number
+          status?: string
+          venue_confirmed?: boolean
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      swipes: {
+        Row: {
+          artist_id: string
+          created_at: string
+          id: string
+          liked: boolean
+          venue_id: string
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          id?: string
+          liked: boolean
+          venue_id: string
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          id?: string
+          liked?: boolean
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "swipes_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swipes_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venues: {
+        Row: {
+          address: string
+          borough: string
+          created_at: string
+          email: string
+          genres: string[]
+          id: string
+          name: string
+          phone: string
+          user_id: string
+          venue_type: string
+        }
+        Insert: {
+          address: string
+          borough?: string
+          created_at?: string
+          email: string
+          genres?: string[]
+          id?: string
+          name: string
+          phone: string
+          user_id: string
+          venue_type?: string
+        }
+        Update: {
+          address?: string
+          borough?: string
+          created_at?: string
+          email?: string
+          genres?: string[]
+          id?: string
+          name?: string
+          phone?: string
+          user_id?: string
+          venue_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_booking_party: { Args: { _booking_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
