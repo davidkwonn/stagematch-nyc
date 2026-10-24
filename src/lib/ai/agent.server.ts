@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, type ModelMessage } from "ai";
+import { streamText, type LanguageModel, type ModelMessage } from "ai";
 import { createLovableAiGatewayRunIdFetch } from "./run-id.server";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
@@ -49,7 +49,8 @@ export async function runAgent(ctx: AgentContext, history: ChatLine[]) {
     : [{ role: "user", content: "[system]: The venue just claimed this artist. Introduce yourself to both, summarize the offer, and ask about dates." }];
 
   const result = streamText({
-    model: provider.responses(MODEL),
+    // Cast: ai and @ai-sdk/openai pin slightly different provider type versions.
+    model: provider.responses(MODEL) as unknown as LanguageModel,
     instructions: instructions(ctx),
     messages,
     providerOptions: {
