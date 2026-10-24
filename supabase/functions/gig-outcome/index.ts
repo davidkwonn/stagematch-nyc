@@ -93,6 +93,7 @@ async function refund(booking: Booking, payment: Payment) {
   await setPaymentStatus(booking.id, 'held', 'refunded');
   await log('payments', payment.whop_payment_id ? 'refund_issued' : 'refund_simulated', {
     booking_id: booking.id, amount_usd: payment.amount_usd, whop_payment_id: payment.whop_payment_id,
+    ...(!payment.whop_payment_id && { simulated: true }),
   });
 
   const threadId = await bookingThreadId(booking.id);
