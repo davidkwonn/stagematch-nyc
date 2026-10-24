@@ -29,6 +29,13 @@
       "when": 1792871568537,
       "tag": "0003_vetting_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792878032355,
+      "tag": "0004_outreach_center",
+      "breakpoints": true
     }
   ]
 }
