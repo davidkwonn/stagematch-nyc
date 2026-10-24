@@ -8,6 +8,13 @@
       "when": 1792859995782,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792864872738,
+      "tag": "0001_stagehand_hackathon_contract",
+      "breakpoints": true
     }
   ]
 }
