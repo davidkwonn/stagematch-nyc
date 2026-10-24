@@ -1,4 +1,5 @@
-// { booking_id, performed } → { status }. The venue reports the gig.
+// { booking_id, performed } → { status }. The venue reports the gig after it happened: performed is
+// accepted only once the show's scheduled end has passed (New York time), a no-show once it was due to start.
 // performed → booking performed; the artist's payout (amount minus our fee) goes out as a Whop claim
 // link in the artist's own manager thread, and only once Whop has created it are the booking and
 // payment released. If Whop refuses (e.g. funds not cleared yet) the money stays held, the booking
@@ -18,9 +19,15 @@ type Payment = {
   amount_usd: number; fee_usd: number; payout_usd: number; whop_payment_id: string | null; status: string; updated_at: string;
 };
 
-// Demo mode (default) lets the venue report before the gig date; DEMO_MODE=false enforces it.
-const demoMode = () => Deno.env.get('DEMO_MODE') !== 'false';
-const todayInNewYork = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+// New York wall-clock times as 'YYYY-MM-DDTHH:MM', so they compare as strings.
+const nowInNewYork = () => new Date().toLocaleString('sv-SE', { timeZone: 'America/New_York' }).slice(0, 16).replace(' ', 'T');
+function showTimes(b: Booking) {
+  if (!b.gig_date) return null;
+  const start = new Date(`${b.gig_date}T${(b.start_time ?? '23:59').slice(0, 5)}:00Z`);
+  const end = new Date(start.getTime() + (b.set_length_min ?? 60) * 60_000);
+  return { start: start.toISOString().slice(0, 16), end: end.toISOString().slice(0, 16) };
+}
+const at = (t: string) => when(t.slice(0, 10), t.slice(11));
 const isServiceCall = (req: Request) =>
   req.headers.get('Authorization') === `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
 
@@ -33,8 +40,14 @@ serve(async req => {
   }
   const retry = booking.status === 'performed' && body.performed;
   if (booking.status !== 'paid_held' && !retry) throw new HttpError(409, `booking is ${booking.status}, not paid_held`);
-  if (!retry && !demoMode() && booking.gig_date && booking.gig_date > todayInNewYork()) {
-    throw new HttpError(409, 'the gig has not happened yet');
+  // The artist is paid only after the show is over; a no-show can be reported once it was due to start.
+  const show = showTimes(booking);
+  if (!show) throw new HttpError(409, 'booking has no gig date');
+  if (!retry && body.performed && nowInNewYork() < show.end) {
+    throw new HttpError(409, `the artist is paid after the show: report it after ${at(show.end)} (New York time)`);
+  }
+  if (!body.performed && nowInNewYork() < show.start) {
+    throw new HttpError(409, `a no-show can be reported once the show was due to start, ${at(show.start)}`);
   }
   const { data: payment } = await db.from('payments')
     .select('amount_usd, fee_usd, payout_usd, whop_payment_id, status, updated_at').eq('booking_id', booking.id).maybeSingle();

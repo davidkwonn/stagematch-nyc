@@ -9,6 +9,7 @@ export type Booking = {
   artist_id: string;
   gig_date: string | null;
   start_time: string | null;
+  set_length_min: number | null;
   offer_usd: number | null;
   status: string;
   artist: { name: string };
