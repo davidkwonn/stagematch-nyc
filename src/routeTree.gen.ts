@@ -23,6 +23,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as ReviewTokenRouteImport } from './routes/review.$token'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings.index'
 import { Route as AuthenticatedBookingsIdRouteImport } from './routes/_authenticated/bookings.$id'
+import { Route as AuthenticatedInboxIndexRouteImport } from './routes/_authenticated/inbox.index'
 import { Route as AuthenticatedInboxIdRouteImport } from './routes/_authenticated/inbox.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -95,6 +96,11 @@ const AuthenticatedBookingsIdRoute = AuthenticatedBookingsIdRouteImport.update({
   path: '/bookings/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInboxIndexRoute = AuthenticatedInboxIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedInboxRoute,
+} as any)
 const AuthenticatedInboxIdRoute = AuthenticatedInboxIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
+  '/inbox/': typeof AuthenticatedInboxIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -124,7 +131,6 @@ export interface FileRoutesByTo {
   '/calendar': typeof AuthenticatedCalendarRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/home': typeof AuthenticatedHomeRoute
-  '/inbox': typeof AuthenticatedInboxRouteWithChildren
   '/intake': typeof AuthenticatedIntakeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
@@ -132,6 +138,7 @@ export interface FileRoutesByTo {
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
+  '/inbox': typeof AuthenticatedInboxIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -150,6 +157,7 @@ export interface FileRoutesById {
   '/_authenticated/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/_authenticated/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
+  '/_authenticated/inbox/': typeof AuthenticatedInboxIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,6 +176,7 @@ export interface FileRouteTypes {
     | '/bookings/$id'
     | '/inbox/$id'
     | '/bookings/'
+    | '/inbox/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -176,7 +185,6 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/discover'
     | '/home'
-    | '/inbox'
     | '/intake'
     | '/onboarding'
     | '/profile'
@@ -184,6 +192,7 @@ export interface FileRouteTypes {
     | '/bookings/$id'
     | '/inbox/$id'
     | '/bookings'
+    | '/inbox'
   id:
     | '__root__'
     | '/'
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bookings/$id'
     | '/_authenticated/inbox/$id'
     | '/_authenticated/bookings/'
+    | '/_authenticated/inbox/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -311,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBookingsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/inbox/': {
+      id: '/_authenticated/inbox/'
+      path: '/'
+      fullPath: '/inbox/'
+      preLoaderRoute: typeof AuthenticatedInboxIndexRouteImport
+      parentRoute: typeof AuthenticatedInboxRoute
+    }
     '/_authenticated/inbox/$id': {
       id: '/_authenticated/inbox/$id'
       path: '/$id'
@@ -323,10 +340,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedInboxRouteChildren {
   AuthenticatedInboxIdRoute: typeof AuthenticatedInboxIdRoute
+  AuthenticatedInboxIndexRoute: typeof AuthenticatedInboxIndexRoute
 }
 
 const AuthenticatedInboxRouteChildren: AuthenticatedInboxRouteChildren = {
   AuthenticatedInboxIdRoute: AuthenticatedInboxIdRoute,
+  AuthenticatedInboxIndexRoute: AuthenticatedInboxIndexRoute,
 }
 
 const AuthenticatedInboxRouteWithChildren =
