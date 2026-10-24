@@ -18,7 +18,7 @@ async function createSession(sdp:unknown,threadId:string,party:Party,ownerId:str
  const conversation=messages.slice(-40).map(m=>`${m.sender_role==='agent'?'Mack':m.sender_role}${m.channel==='voice'?' (voice)':''}: ${m.content.slice(0,400)}`);
  const instructions=`${VOICE_PROMPT}\nTrusted context: ${JSON.stringify({...context,conversation})}`;
  const res=await fetch('https://api.openai.com/v1/live/sessions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),body:JSON.stringify({
-  session:{model:process.env['VOICE_MODEL']||'gpt-live-1',store:false,delegation:{type:'client'},audio:{output:{voice:process.env['VOICE_NAME']||'cedar'}},instructions,
+  session:{model:process.env['VOICE_MODEL']||'gpt-live-1',store:false,delegation:{type:'client'},audio:{output:{voice:process.env['VOICE_NAME']||'meridian'}},instructions,
    client:{data_channel:{allowed_client_events:CLIENT_EVENTS,allowed_server_events:SERVER_EVENTS.map(type=>({type}))}}},
   transport:{type:'webrtc',sdp}})});
  if(!res.ok){const detail=(await res.text()).slice(0,300);await logDecision('Mack','Voice call failed',{status:res.status,detail},db);throw new Error(`Voice could not connect (${res.status})`);}
