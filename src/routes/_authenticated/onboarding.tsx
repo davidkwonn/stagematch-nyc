@@ -82,8 +82,8 @@ function ArtistForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!genres.length) return toast.error("Pick at least one music type.");
-    if (!video) return toast.error("Add a ~30 second video of you playing.");
+    if (!genres.length) { toast.error("Pick at least one music type."); return; }
+    if (!video) { toast.error("Add a ~30 second video of you playing."); return; }
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -99,7 +99,7 @@ function ArtistForm() {
         background,
         genres,
         video_path: path,
-        email: user.email,
+        email: user.email ?? null,
       });
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["me"] });
@@ -155,7 +155,7 @@ function VenueForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!genres.length) return toast.error("Pick at least one music type you want.");
+    if (!genres.length) { toast.error("Pick at least one music type you want."); return; }
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();

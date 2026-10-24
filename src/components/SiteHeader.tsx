@@ -45,7 +45,7 @@ export function SiteHeader() {
             </>
           ) : (
             <Button asChild size="sm" variant="poster">
-              <Link to="/auth">Sign in</Link>
+              <Link to="/auth" search={{ as: undefined }}>Sign in</Link>
             </Button>
           )}
         </nav>

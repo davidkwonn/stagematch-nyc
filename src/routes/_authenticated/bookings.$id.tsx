@@ -91,7 +91,7 @@ function BookingPage() {
 
   async function act(decline?: boolean) {
     try {
-      await confirm({ data: { bookingId: id, decline } });
+      await confirm({ data: decline ? { bookingId: id, decline: true } : { bookingId: id } });
       qc.invalidateQueries({ queryKey: q.queryKey });
       qc.invalidateQueries({ queryKey: ["bookings"] });
     } catch (err) {
