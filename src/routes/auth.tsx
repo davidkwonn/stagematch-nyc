@@ -16,6 +16,8 @@ export const Route = createFileRoute("/auth")({
     meta: [
       { title: "Sign in — Stagehand" },
       { name: "description", content: "Sign in or create your Stagehand artist or venue account." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:title", content: "Sign in — Stagehand" },
       { property: "og:description", content: "Sign in or create your Stagehand artist or venue account." },
     ],

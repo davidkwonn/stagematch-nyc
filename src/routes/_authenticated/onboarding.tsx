@@ -8,15 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { GenrePicker } from "@/components/GenrePicker";
+import { pageHead } from "@/data/metadata";
 import { BOROUGHS, VENUE_TYPES } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
-  head: () => ({
-    meta: [
-      { title: "Set up your profile — Stagehand" },
-      { name: "description", content: "Tell us about your act or your venue." },
-    ],
-  }),
+  head: () => pageHead("Set up your profile", "Tell us about your act or your NYC venue."),
   component: Onboarding,
 });
 
@@ -41,7 +37,7 @@ function Onboarding() {
 
   if (!role) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
+      <div className="app-page">
         <h1 className="font-display text-6xl">Who are you?</h1>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <Button onClick={() => setRole("artist")} className="poster -rotate-1 bg-primary p-8 text-left text-primary-foreground">
@@ -99,7 +95,7 @@ function ArtistForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-6 px-4 py-12">
+    <form onSubmit={submit} className="app-page mx-auto max-w-4xl space-y-6">
       <h1 className="font-display text-6xl">Your act</h1>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
@@ -159,7 +155,7 @@ function VenueForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-6 px-4 py-12">
+    <form onSubmit={submit} className="app-page mx-auto max-w-4xl space-y-6">
       <h1 className="font-display text-6xl">Your venue</h1>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
