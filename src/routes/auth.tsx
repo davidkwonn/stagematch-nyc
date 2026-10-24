@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { getSession, onIdentity, signIn, signUp } from "@/data/auth";
 import { lovable } from "@/integrations/lovable/index";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -33,13 +33,10 @@ function AuthPage() {
 
   useEffect(() => {
     if (as) sessionStorage.setItem("stagehand-role", as);
-    supabase.auth.getSession().then(({ data }) => {
+    getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/home" });
     });
-    const { data } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/home" });
-    });
-    return () => data.subscription.unsubscribe();
+    return onIdentity(() => navigate({ to: "/home" }));
   }, [as, navigate]);
 
   async function submit(e: React.FormEvent) {
@@ -47,16 +44,10 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin + "/home" },
-        });
-        if (error) throw error;
+        const data = await signUp(email, password);
         if (!data.session) toast.success("Check your email to confirm your account.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signIn(email, password);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
