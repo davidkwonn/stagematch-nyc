@@ -21,6 +21,7 @@ import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as ReviewTokenRouteImport } from './routes/review.$token'
+import { Route as AuthenticatedArtistIdRouteImport } from './routes/_authenticated/artist.$id'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings.index'
 import { Route as AuthenticatedBookingsIdRouteImport } from './routes/_authenticated/bookings.$id'
 import { Route as AuthenticatedInboxIndexRouteImport } from './routes/_authenticated/inbox.index'
@@ -85,6 +86,11 @@ const ReviewTokenRoute = ReviewTokenRouteImport.update({
   path: '/review/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedArtistIdRoute = AuthenticatedArtistIdRouteImport.update({
+  id: '/artist/$id',
+  path: '/artist/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBookingsIndexRoute =
   AuthenticatedBookingsIndexRouteImport.update({
     id: '/bookings/',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/review/$token': typeof ReviewTokenRoute
+  '/artist/$id': typeof AuthenticatedArtistIdRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/review/$token': typeof ReviewTokenRoute
+  '/artist/$id': typeof AuthenticatedArtistIdRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/review/$token': typeof ReviewTokenRoute
+  '/_authenticated/artist/$id': typeof AuthenticatedArtistIdRoute
   '/_authenticated/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/_authenticated/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/review/$token'
+    | '/artist/$id'
     | '/bookings/$id'
     | '/inbox/$id'
     | '/bookings/'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/review/$token'
+    | '/artist/$id'
     | '/bookings/$id'
     | '/inbox/$id'
     | '/bookings'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
     | '/review/$token'
+    | '/_authenticated/artist/$id'
     | '/_authenticated/bookings/$id'
     | '/_authenticated/inbox/$id'
     | '/_authenticated/bookings/'
@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/artist/$id': {
+      id: '/_authenticated/artist/$id'
+      path: '/artist/$id'
+      fullPath: '/artist/$id'
+      preLoaderRoute: typeof AuthenticatedArtistIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/bookings/': {
       id: '/_authenticated/bookings/'
       path: '/bookings'
@@ -359,6 +378,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIntakeRoute: typeof AuthenticatedIntakeRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedArtistIdRoute: typeof AuthenticatedArtistIdRoute
   AuthenticatedBookingsIdRoute: typeof AuthenticatedBookingsIdRoute
   AuthenticatedBookingsIndexRoute: typeof AuthenticatedBookingsIndexRoute
 }
@@ -371,6 +391,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIntakeRoute: AuthenticatedIntakeRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedArtistIdRoute: AuthenticatedArtistIdRoute,
   AuthenticatedBookingsIdRoute: AuthenticatedBookingsIdRoute,
   AuthenticatedBookingsIndexRoute: AuthenticatedBookingsIndexRoute,
 }

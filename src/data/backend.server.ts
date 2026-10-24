@@ -52,13 +52,17 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
   const s=required(await user.from('suggestions').select('*,venues(*),artists(*)').eq('id',id).single());if(s.venues?.user_id!==userId)throw new Error('Only the venue can choose');const db=await admin();
   if(s.status==='declined')throw new Error('Suggestion already declined');
   if(data.decision==='no'){checked(await db.from('suggestions').update({status:'declined'}).eq('id',id).eq('status','suggested'));await log('Mack','Suggestion declined');return{};}
-  let b=checked(await db.from('bookings').select('*').eq('suggestion_id',id).maybeSingle());if(!b)b=required(await db.from('bookings').insert({venue_id:s.venue_id,artist_id:s.artist_id,suggestion_id:id,gig_date:s.slot_date,start_time:s.slot_start,set_length_min:s.artists?.set_length_min,offer_usd:s.artists?.rate_usd??s.venues.budget_usd,status:'negotiating'}).select('*').single());
-  if(!b)throw new Error('Booking not found');
-  let t=checked(await db.from('threads').select('*').eq('booking_id',b.id).maybeSingle());if(!t)t=required(await db.from('threads').insert({kind:'booking',artist_id:b.artist_id,venue_id:b.venue_id,booking_id:b.id}).select('*').single());
-  if(!t)throw new Error('Thread not found');
-  checked(await db.from('suggestions').update({status:'accepted'}).eq('id',id));
-  const msgs=required(await db.from('messages').select('id').eq('thread_id',t.id).limit(1));if(!msgs.length)checked(await db.from('messages').insert({thread_id:t.id,sender_role:'agent',content:`Hey ${s.artists?.name} and ${s.venues.name}! Let's lock in ${b.gig_date} at ${b.start_time?.slice(0,5)}, ${b.set_length_min} minutes for $${b.offer_usd}. Are these terms right for both of you?`}));
-  await log('Mack','Booking conversation opened');return{booking_id:b.id,thread_id:t.id};
+   const offer=s.artists?.rate_usd??s.venues.budget_usd??0;
+   let b=checked(await db.from('bookings').select('*').eq('suggestion_id',id).maybeSingle());if(!b)b=required(await db.from('bookings').insert({venue_id:s.venue_id,artist_id:s.artist_id,suggestion_id:id,gig_date:s.slot_date,start_time:s.slot_start,set_length_min:s.artists?.set_length_min,offer_usd:offer,offer_amount:offer,status:'negotiating'}).select('*').single());
+   if(!b)throw new Error('Booking not found');
+   let t=checked(await db.from('threads').select('*').eq('booking_id',b.id).maybeSingle());if(!t)t=required(await db.from('threads').insert({kind:'booking',artist_id:b.artist_id,venue_id:b.venue_id,booking_id:b.id}).select('*').single());
+   if(!t)throw new Error('Thread not found');
+   checked(await db.from('suggestions').update({status:'accepted'}).eq('id',id));
+   const msgs=required(await db.from('messages').select('id').eq('thread_id',t.id).limit(1));if(!msgs.length)checked(await db.from('messages').insert({thread_id:t.id,sender_role:'agent',content:`Hey ${s.artists?.name} and ${s.venues.name}! Mack here — you're matched. First step: let's set up a Google Meet video call so you two can meet. What days and times work for each of you this week? After the call, we'll lock in the in-person gig: ${b.gig_date} at ${b.start_time?.slice(0,5)}, ${b.set_length_min} minutes for $${b.offer_usd}.`}));
+   const managerThread=async(party:'artist'|'venue',ownerId:string,content:string)=>{const key=party==='artist'?'artist_id':'venue_id';let mt=checked(await db.from('threads').select('*').eq('kind','manager').eq(key,ownerId).maybeSingle());if(!mt)mt=required(await db.from('threads').insert({kind:'manager',...(party==='artist'?{artist_id:ownerId}:{venue_id:ownerId})}).select('*').single());if(mt)checked(await db.from('messages').insert({thread_id:mt.id,sender_role:'agent',content}));};
+   await managerThread('venue',s.venue_id,`You confirmed ${s.artists?.name}! They're ${s.artists?.genres.join(' / ')||'a great fit'} from ${s.artists?.borough||'NYC'}, $${s.artists?.rate_usd??offer} for a ${s.artists?.set_length_min??b.set_length_min}-minute set. I've opened a group chat with you both — first we'll find a time for a Google Meet call. When are you free this week?`);
+   await managerThread('artist',s.artist_id,`Great news — ${s.venues.name} confirmed you! It's a ${s.venues.venue_type} in ${s.venues.borough} looking for ${s.venues.genres.join(' / ')||'your sound'}. I've opened a group chat with you both — first we'll find a time for a Google Meet call. When are you free this week?`);
+   await log('Mack','Booking conversation opened');return{booking_id:b.id,thread_id:t.id};
  }
  const id=requireId(data.booking_id);const b=required(await user.from('bookings').select('*,artists(user_id),venues(user_id)').eq('id',id).single());const party=b.venues?.user_id===userId?'venue':b.artists?.user_id===userId?'artist':null;if(!party)throw new Error('Not part of this booking');
  const db=await admin();
