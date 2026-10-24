@@ -79,8 +79,9 @@ serve(async req => {
     throw bErr;
   }
 
+  // The inbox embeds artists(*) and venues(*) through the thread, so booking threads carry both ids.
   const { data: thread, error: tErr } = await db.from('threads')
-    .insert({ kind: 'booking', booking_id: booking.id }).select('id').single();
+    .insert({ kind: 'booking', booking_id: booking.id, artist_id: s.artist_id, venue_id: s.venue_id }).select('id').single();
   if (tErr) {
     await db.from('bookings').delete().eq('id', booking.id);
     await db.from('suggestions').update({ status: 'suggested' }).eq('id', s.id);

@@ -11,7 +11,6 @@ import { isServiceCall, isUuid, readJson } from '../_shared/internal.ts';
 import { type Artist, type AvailabilityRow, rank, type Venue } from './score.ts';
 
 const AVAILABILITY_COLS = 'owner_id, kind, date, weekday, start_time, end_time';
-const CARD_ARTIST = 'id, name, genres, borough, rate_usd, vetting, video_path, photo_path';
 
 serve(async req => {
   const started = Date.now();
@@ -63,7 +62,7 @@ serve(async req => {
   if (stale.length) await db.from('suggestions').delete().in('id', stale).eq('status', 'suggested');
 
   const { data: suggestions, error } = await db.from('suggestions')
-    .select(`*, artist:artists(${CARD_ARTIST})`)
+    .select('*, artists(*)') // same shape as the app's Suggestion type
     .eq('venue_id', venue_id).eq('status', 'suggested').order('score', { ascending: false });
   if (error) throw error;
 
@@ -76,7 +75,7 @@ serve(async req => {
     considered: artistsRes.data?.length ?? 0,
     new_count: newCount,
     dropped: stale.length,
-    picks: (suggestions ?? []).map(s => ({ artist: s.artist?.name, score: s.score, slot: `${s.slot_date} ${s.slot_start}`, reason: s.reason })),
+    picks: (suggestions ?? []).map(s => ({ artist: s.artists?.name, score: s.score, slot: `${s.slot_date} ${s.slot_start}`, reason: s.reason })),
   });
   return json({ suggestions: suggestions ?? [], new_count: newCount });
 });
