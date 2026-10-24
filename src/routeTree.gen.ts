@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as LiveRouteImport } from './routes/live'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
@@ -19,6 +20,7 @@ import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated/intake'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as ReviewTokenRouteImport } from './routes/review.$token'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings.index'
 import { Route as AuthenticatedBookingsIdRouteImport } from './routes/_authenticated/bookings.$id'
 import { Route as AuthenticatedInboxIdRouteImport } from './routes/_authenticated/inbox.$id'
@@ -35,6 +37,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiveRoute = LiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
@@ -72,6 +79,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ReviewTokenRoute = ReviewTokenRouteImport.update({
+  id: '/review/$token',
+  path: '/review/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedBookingsIndexRoute =
   AuthenticatedBookingsIndexRouteImport.update({
     id: '/bookings/',
@@ -92,6 +104,7 @@ const AuthenticatedInboxIdRoute = AuthenticatedInboxIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/live': typeof LiveRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -99,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/intake': typeof AuthenticatedIntakeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/review/$token': typeof ReviewTokenRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
@@ -106,6 +120,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/live': typeof LiveRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -113,6 +128,7 @@ export interface FileRoutesByTo {
   '/intake': typeof AuthenticatedIntakeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/review/$token': typeof ReviewTokenRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
@@ -122,6 +138,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/live': typeof LiveRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
@@ -129,6 +146,7 @@ export interface FileRoutesById {
   '/_authenticated/intake': typeof AuthenticatedIntakeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/review/$token': typeof ReviewTokenRoute
   '/_authenticated/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/_authenticated/inbox/$id': typeof AuthenticatedInboxIdRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
@@ -138,6 +156,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/live'
     | '/calendar'
     | '/discover'
     | '/home'
@@ -145,6 +164,7 @@ export interface FileRouteTypes {
     | '/intake'
     | '/onboarding'
     | '/profile'
+    | '/review/$token'
     | '/bookings/$id'
     | '/inbox/$id'
     | '/bookings/'
@@ -152,6 +172,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/live'
     | '/calendar'
     | '/discover'
     | '/home'
@@ -159,6 +180,7 @@ export interface FileRouteTypes {
     | '/intake'
     | '/onboarding'
     | '/profile'
+    | '/review/$token'
     | '/bookings/$id'
     | '/inbox/$id'
     | '/bookings'
@@ -167,6 +189,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/live'
     | '/_authenticated/calendar'
     | '/_authenticated/discover'
     | '/_authenticated/home'
@@ -174,6 +197,7 @@ export interface FileRouteTypes {
     | '/_authenticated/intake'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
+    | '/review/$token'
     | '/_authenticated/bookings/$id'
     | '/_authenticated/inbox/$id'
     | '/_authenticated/bookings/'
@@ -183,6 +207,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  LiveRoute: typeof LiveRoute
+  ReviewTokenRoute: typeof ReviewTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -206,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/live': {
+      id: '/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof LiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/calendar': {
@@ -256,6 +289,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/review/$token': {
+      id: '/review/$token'
+      path: '/review/$token'
+      fullPath: '/review/$token'
+      preLoaderRoute: typeof ReviewTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/bookings/': {
       id: '/_authenticated/bookings/'
@@ -323,6 +363,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  LiveRoute: LiveRoute,
+  ReviewTokenRoute: ReviewTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
