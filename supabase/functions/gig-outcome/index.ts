@@ -12,7 +12,7 @@ import { db, getCaller, log, postAgentMessage } from '../_shared/db.ts';
 import {
   artistManagerThreadId, bookingThreadId, leasePayment, loadBooking, moveBooking, setPaymentStatus, usd, when, type Booking,
 } from '../_shared/payments/booking.ts';
-import { createPayoutLink, refundPayment } from '../_shared/payments/whop.ts';
+import { createPayoutLink, refundPayment, venuePaymentProblem } from '../_shared/payments/whop.ts';
 
 type Payment = {
   amount_usd: number; fee_usd: number; payout_usd: number; whop_payment_id: string | null; status: string; updated_at: string;
@@ -48,6 +48,18 @@ async function release(booking: Booking, payment: Payment, firstReport: boolean)
   if (firstReport) {
     if (!await moveBooking(booking.id, 'paid_held', 'performed')) throw new HttpError(409, 'gig already reported');
     await log('payments', 'gig_performed', { booking_id: booking.id });
+  } else {
+    // A retry must not overlap an attempt that may still be running (edge functions stop well within 5 min),
+    // nor follow one that already created a link but crashed before recording it.
+    if (Date.now() - Date.parse(payment.updated_at) < 5 * 60_000) {
+      throw new HttpError(409, 'a payout attempt ran in the last 5 minutes, try again shortly');
+    }
+    const { data: sent } = await db.from('agent_log').select('id')
+      .eq('action', 'payout_sent').eq('detail->>booking_id', booking.id).limit(1);
+    if (sent?.length) {
+      await log('payments', 'payout_needs_review', { booking_id: booking.id, reason: 'a payout link was already created', needs_human: true });
+      throw new HttpError(409, 'a payout was already sent for this booking, needs review');
+    }
   }
   const attempt = await leasePayment(booking.id, payment.updated_at);
   if (!attempt) throw new HttpError(409, 'payout already in progress');
@@ -59,7 +71,7 @@ async function release(booking: Booking, payment: Payment, firstReport: boolean)
   // A real payment is released only once Whop has created the artist's claim link.
   let link: Awaited<ReturnType<typeof createPayoutLink>> | null = null;
   if (!demo) {
-    let reason = managerThreadId ? null : 'no private thread for the artist';
+    let reason = managerThreadId ? await venuePaymentProblem(payment.whop_payment_id!) : 'no private thread for the artist';
     if (!reason) {
       try {
         link = await createPayoutLink(Number(payment.payout_usd), booking.id, attempt);
@@ -74,13 +86,13 @@ async function release(booking: Booking, payment: Payment, firstReport: boolean)
           await postAgentMessage(threadId,
             `Thanks for confirming the show on ${when(booking.gig_date)}, ${booking.venue.name}. ${booking.artist.name}'s ` +
             `${payout} is still held safely: Whop hasn't completed the transfer yet, so I haven't marked it paid. ` +
-            `I'll send it the moment it goes through.`);
+            `I've flagged it to the Stagehand team to finish.`);
         }
         if (managerThreadId) {
           await postAgentMessage(managerThreadId,
             `${booking.venue.name} confirmed your show. Your ${payout} is still held for you, untouched, but Whop hasn't ` +
-            `completed the transfer yet, so it is not paid yet. I've flagged it to the Stagehand team and I'll post your ` +
-            `collection link here as soon as it goes through.`);
+            `completed the transfer yet, so it is not paid yet. I've flagged it to the Stagehand team to finish the ` +
+            `transfer; your collection link will appear in this chat when it's done.`);
         }
       }
       return 'performed';
@@ -106,8 +118,7 @@ async function release(booking: Booking, payment: Payment, firstReport: boolean)
     await postAgentMessage(managerThreadId, link
       ? `Your pay for ${booking.venue.name} is ready: ${payout}. Collect it on Whop` +
         `${link.expiresAt ? ` before ${when(link.expiresAt.slice(0, 10))}` : ''} and keep the link private, ` +
-        `anyone who has it can claim it:
-${link.url}`
+        `anyone who has it can claim it:\n${link.url}`
       : `Your pay for ${booking.venue.name} is released: ${payout}${demoNote}.`);
   }
   return 'released';

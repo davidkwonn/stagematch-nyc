@@ -60,6 +60,19 @@ export async function refundPayment(paymentId: string, bookingId: string) {
   await whop().payments.refund({ id: paymentId, metadata: { booking_id: bookingId } });
 }
 
+// Before paying the artist: is the venue's payment still paid, unrefunded, and real in this
+// Whop environment (a sandbox payment is not found by production keys)? null = good, else why not.
+export async function venuePaymentProblem(paymentId: string): Promise<string | null> {
+  try {
+    const p = await whop().payments.retrieve({ id: paymentId });
+    if (p.status !== 'paid') return `venue payment is ${p.status} on Whop`;
+    if (p.refunded_at) return 'venue payment was refunded on Whop';
+    return null;
+  } catch (e) {
+    return `venue payment not found on Whop (${Deno.env.get('WHOP_ENV') ?? 'sandbox'}): ${e instanceof Error ? e.message : e}`;
+  }
+}
+
 // Artists have no Whop account in our schema, so the payout is a claim link they open to collect.
 // Anyone holding the link can claim it: share it only where the artist alone can read it.
 // `attempt` keys the request per payout attempt: the SDK's own retries reuse it, a later
