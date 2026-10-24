@@ -25,7 +25,7 @@ export function createVoiceClient(){
  function flush(delegationId?:string){
   clearTimeout(relayTimer);const turns=pending;pending=[];if(!turns.length&&!delegationId)return busy;
   busy=busy.then(async()=>{
-   try{const r=await saveVoiceTurns(threadId,turns,delegationId);if(!active)return;if(delegationId)append('commentary',r.say||'Done.',delegationId);else if(r.note)append('thinking',r.note);}
+   try{const r=await saveVoiceTurns(threadId,turns,delegationId);if(!active)return;if(r.note)append('thinking',r.note);if(delegationId)append('commentary',r.say||'Done.',delegationId);}
    catch{if(active&&delegationId)append('commentary','The backend could not save that just now. Tell the user plainly and ask them to repeat it.',delegationId);}
   });
   return busy;

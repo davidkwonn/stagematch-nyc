@@ -45,6 +45,6 @@ async function processTurns(input:unknown,delegationId:string|undefined,threadId
   return delegationId?{say:'The backend could not save that just now. Tell the user plainly and ask them to repeat it.'}:{};}
  const note=[r.saved.length&&`Saved: ${r.saved.join('; ')}.`,r.intakeCompleted&&'Intake complete: the calendar is ready.',r.matches.length&&`Top artists, also posted in the chat: ${r.matches.join(', ')}.`,!r.intakeCompleted&&r.missing.length&&`Still missing: ${r.missing.join(', ')}.`].filter(Boolean).join(' ');
  await logDecision('Mack','Voice turns processed',{saved:r.saved.length,delegated:!!delegationId,intake_completed:r.intakeCompleted},db);
- if(delegationId)return{say:[r.saved.length||r.intakeCompleted?note:'',r.reply].filter(Boolean).join(' ')||note||'Nothing new to save.'};
+ if(delegationId)return{say:r.reply||note||'Nothing new to save.',...(note?{note}:{})};
  return r.saved.length||r.intakeCompleted?{note}:{};
 }
