@@ -1,5 +1,5 @@
 # Stagehand hackathon
-- [ ] Read-only booking payment timeline and profile Wallet, with live refresh and verified totals; only new payments.ts in data.
+- [x] Read-only booking payment timeline and profile Wallet with existing live subscriptions; totals tested, signed-in empty states checked (account has no payment rows).
 - [x] Additive shared schema, private media, 12 sample NYC artists / venues, four weeks of availability and 48 suggestions.
 - [x] Domain data layer and replaceable backend action contract.
 - [x] Mack intake and booking mediation implementation, live conversations and requested voice stub.
