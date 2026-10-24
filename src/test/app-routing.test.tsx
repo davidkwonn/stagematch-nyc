@@ -14,4 +14,10 @@ describe("App routing", () => {
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
+  it("matches an inbox conversation rather than leaving the thread list on screen", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const matches = router.matchRoutes("/inbox/9c136869-4582-4bea-9fc6-13c6318d8dcf");
+    expect(matches.at(-1)?.routeId).toBe("/_authenticated/inbox/$id");
+    expect(router.matchRoutes("/inbox").at(-1)?.routeId).toBe("/_authenticated/inbox/");
+  });
 });

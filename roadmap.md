@@ -1,8 +1,11 @@
 # Stagehand hackathon
-- [ ] Shared schema, private media, sample NYC profiles and availability.
-- [ ] Domain data layer and replaceable backend action contract.
-- [ ] Mack intake and booking mediation with live conversations; voice stub.
-- [ ] Mobile tabs / desktop sidebar, calendar, suggestions, inbox and editable profiles.
-- [ ] Public expert review and live activity screen.
-- [ ] Rule tests and signed-in end-to-end checks.
-- [ ] Document any schema compatibility and payment integration limitations.
+- [x] Additive shared schema, private media, 12 sample NYC artists / venues, four weeks of availability and 48 suggestions.
+- [x] Domain data layer and replaceable backend action contract.
+- [x] Mack intake and booking mediation implementation, live conversations and requested voice stub.
+- [x] Mobile tabs / desktop sidebar, calendar, suggestions, inbox and editable profiles.
+- [x] Public expert review submission and live activity screen, tested in browser.
+- [x] Rule tests and signed-in artist intake → calendar → inbox follow-up checks; 360px layout checks.
+- [x] Handoff documentation for schema compatibility, samples and payment integration limitations.
+- [ ] Exact destructive schema replacement: blocked by live-schema compatibility permissions; legacy fields retained and documented.
+- [ ] Venue matching → two-party confirmation end-to-end verification: needs authorized access to a venue account; artist account verified.
+- [ ] Real checkout, release/refund and trusted voice turns: waiting for teammate payment/voice connections as described in handoff.
