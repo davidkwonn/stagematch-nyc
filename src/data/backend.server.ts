@@ -3,11 +3,19 @@ import type { Database, BookingStatus, Suggestion, Party, ReviewInput } from './
 import type { ActionInput, ActionResult, PublicResult } from './backend.functions';
 import { paymentAmounts, canReportGig } from './rules';
 import { logDecision } from './live';
+import { rank, bookedNights, todayNY, BOOKED_STATUSES } from './matching';
 async function admin(){const{ supabaseAdmin }=await import('@/integrations/supabase/client.server');return supabaseAdmin;}
 function requireId(value:string|undefined){if(!value||! /^[a-f0-9-]{36}$/i.test(value))throw new Error('Invalid record');return value;}
 function checked<T>(r:{data:T;error:{message:string}|null}){if(r.error)throw new Error(r.error.message);return r.data;}
 async function log(agent:string,action:string,detail:Record<string,string|number>={}) {const db=await admin();await logDecision(agent,action,detail,db);}
 function required<T>(r:{data:T;error:{message:string}|null}):NonNullable<T>{if(r.error)throw new Error(r.error.message);if(r.data==null)throw new Error('Record not found');return r.data;}
+// A night is taken once the artist or the venue has a confirmed (or later) booking on it.
+async function assertNightFree(db:SupabaseClient<Database>,artistId:string,venueId:string,date:string,artistName:string,venueName:string,exceptBookingId?:string){
+ if(date<todayNY())throw new Error('That date has passed. Ask Mack for a new one, or tap Find artists to refresh.');
+ let q=db.from('bookings').select('id,artist_id').eq('gig_date',date).in('status',[...BOOKED_STATUSES]).or(`artist_id.eq.${artistId},venue_id.eq.${venueId}`).limit(1);if(exceptBookingId)q=q.neq('id',exceptBookingId);
+ const hit=checked(await q)?.[0];if(!hit)return;
+ throw new Error(hit.artist_id===artistId?`${artistName} is already booked that night. Ask Mack for another date.`:`${venueName==='you'?'You already have':venueName+' already has'} a gig that night. Ask Mack for another date.`);
+}
 export async function handleAction(data:ActionInput,user:SupabaseClient<Database>,userId:string,request:Request):Promise<ActionResult>{
  if(data.action==='start'){
   if(data.party!=='artist'&&data.party!=='venue')throw new Error('Choose artist or venue');
@@ -34,17 +42,16 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
  if(data.action==='match'){
   const id=requireId(data.venue_id);const v=required(await user.from('venues').select('*').eq('id',id).eq('user_id',userId).single());if(!v)throw new Error('Only the venue can find artists');
   if(!v.intake_completed_at)throw new Error('Finish intake first');
-  const db=await admin();const artists=required(await db.from('artists').select('*').not('intake_completed_at','is',null));
-  const slots=required(await db.from('availability').select('*'));const existing=required(await db.from('suggestions').select('artist_id,status').eq('venue_id',id));
-  const {slotsOnDay}=await import('./availability');const today=new Date().toISOString().slice(0,10);const rows=[];
-  for(const a of artists){if(a.user_id===userId||a.vetting==='rejected'||existing.some(s=>s.artist_id===a.id&&s.status!=='suggested'))continue;const overlap=a.genres.filter(g=>v.genres.includes(g));if(!overlap.length||(a.rate_usd??0)>(v.budget_usd??0))continue;
-   let match:{date:string;start:string}|null=null;
-   for(let n=0;n<28&&!match;n++){const d=new Date(`${today}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+n);const date=d.toISOString().slice(0,10);if(date<(a.start_date??today)||date<(v.start_date??today))continue;
-    for(const vs of slotsOnDay(slots.filter(s=>s.owner_type==='venue'&&s.owner_id===id),date))for(const as of slotsOnDay(slots.filter(s=>s.owner_type==='artist'&&s.owner_id===a.id),date)){const start=vs.start_time>as.start_time?vs.start_time:as.start_time;const end=vs.end_time<as.end_time?vs.end_time:as.end_time;const mins=(x:string)=>Number(x.slice(0,2))*60+Number(x.slice(3,5));if(mins(end)-mins(start)>=Math.max(a.set_length_min??30,v.set_length_min??30)){match={date,start};break;}}
-   }
-   if(match)rows.push({venue_id:id,artist_id:a.id,slot_date:match.date,slot_start:match.start,score:Math.min(99,65+overlap.length*8+(a.borough===v.borough?8:0)+(a.vetting==='verified'?5:0)),reason:`${overlap.join(' / ')} fits your room, with overlapping availability and a $${a.rate_usd} rate within budget.`});
-  }
-  if(rows.length)checked(await db.from('suggestions').upsert(rows,{onConflict:'venue_id,artist_id'}));await log('Mack','Artists matched',{count:rows.length});
+  const started=Date.now();const db=await admin();const today=todayNY();
+  const [artists,slots,existing,booked]=await Promise.all([db.from('artists').select('id,user_id,borough,genres,rate_usd,start_date,vetting').not('intake_completed_at','is',null),db.from('availability').select('owner_type,owner_id,kind,date,weekday,start_time,end_time'),db.from('suggestions').select('id,artist_id,status').eq('venue_id',id),db.from('bookings').select('artist_id,venue_id,gig_date').in('status',[...BOOKED_STATUSES]).gte('gig_date',today)]);
+  const artistRows=required(artists).filter(a=>a.user_id!==userId);const slotRows=required(slots);const cards=required(existing);const nights=bookedNights(required(booked));
+  // Our ranking (src/data/matching.ts): shared evenings over 6 weeks, genres, pay fit, borough, Terac verification; never a booked night.
+  const ranked=rank({venue:v,venueAvailability:slotRows.filter(s=>s.owner_type==='venue'&&s.owner_id===id),artists:artistRows,artistAvailability:slotRows.filter(s=>s.owner_type==='artist'),exclude:new Set(cards.filter(s=>s.status!=='suggested').map(s=>s.artist_id)),today,venueBooked:nights.venue.get(id),artistBooked:nights.artist});
+  // Status is left out so a card the venue answers meanwhile keeps its answer; new rows default to 'suggested'.
+  if(ranked.length)checked(await db.from('suggestions').upsert(ranked.map(r=>({...r,venue_id:id})),{onConflict:'venue_id,artist_id'}));
+  const keep=new Set(ranked.map(r=>r.artist_id));const stale=cards.filter(s=>s.status==='suggested'&&!keep.has(s.artist_id)).map(s=>s.id);
+  if(stale.length)checked(await db.from('suggestions').delete().in('id',stale).eq('status','suggested'));
+  await log('Mack','Artists matched',{count:ranked.length,dropped:stale.length,considered:artistRows.length,ms:Date.now()-started});
   const suggestions=required(await user.from('suggestions').select('*,artists(*)').eq('venue_id',id).eq('status','suggested').order('score',{ascending:false}));return{suggestions:suggestions as Suggestion[]};
  }
  if(data.action==='decide'){
@@ -53,7 +60,7 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
   if(s.status==='declined')throw new Error('Suggestion already declined');
   if(data.decision==='no'){checked(await db.from('suggestions').update({status:'declined'}).eq('id',id).eq('status','suggested'));await log('Mack','Suggestion declined');return{};}
    const offer=s.artists?.rate_usd??s.venues.budget_usd??0;
-   let b=checked(await db.from('bookings').select('*').eq('suggestion_id',id).maybeSingle());if(!b)b=required(await db.from('bookings').insert({venue_id:s.venue_id,artist_id:s.artist_id,suggestion_id:id,gig_date:s.slot_date,start_time:s.slot_start,set_length_min:s.artists?.set_length_min,offer_usd:offer,offer_amount:offer,status:'negotiating'}).select('*').single());
+   let b=checked(await db.from('bookings').select('*').eq('suggestion_id',id).maybeSingle());if(!b&&s.slot_date)await assertNightFree(db,s.artist_id,s.venue_id,s.slot_date,s.artists?.name??'This artist','you');if(!b)b=required(await db.from('bookings').insert({venue_id:s.venue_id,artist_id:s.artist_id,suggestion_id:id,gig_date:s.slot_date,start_time:s.slot_start,set_length_min:s.artists?.set_length_min,offer_usd:offer,offer_amount:offer,status:'negotiating'}).select('*').single());
    if(!b)throw new Error('Booking not found');
    let t=checked(await db.from('threads').select('*').eq('booking_id',b.id).maybeSingle());if(!t)t=required(await db.from('threads').insert({kind:'booking',artist_id:b.artist_id,venue_id:b.venue_id,booking_id:b.id}).select('*').single());
    if(!t)throw new Error('Thread not found');
@@ -67,6 +74,7 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
  const id=requireId(data.booking_id);const b=required(await user.from('bookings').select('*,artists(user_id),venues(user_id)').eq('id',id).single());const party=b.venues?.user_id===userId?'venue':b.artists?.user_id===userId?'artist':null;if(!party)throw new Error('Not part of this booking');
  const db=await admin();
  if(data.action==='confirm'){
+  if(!data.decline&&b.gig_date){const names=checked(await db.from('bookings').select('artists(name),venues(name)').eq('id',id).single());await assertNightFree(db,b.artist_id,b.venue_id,b.gig_date,names?.artists?.name??'The artist',names?.venues?.name??'The venue',id);}
   const result=checked(await user.rpc('settle_booking_confirmation',{_booking_id:id,_decline:!!data.decline}));await log('Mack',data.decline?'Booking cancelled':'Booking confirmation');return{status:result as BookingStatus};
  }
  if(data.action==='pay'){
