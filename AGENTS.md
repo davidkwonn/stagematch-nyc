@@ -21,6 +21,7 @@
 - Voice transport is replaced only in src/features/voice/voice-client.ts; the stub must not claim a connected call.
 - Payment provider acknowledgements are required before held, released or refunded states; never simulate a charge or payout.
 - Keep inbox as an Outlet parent with separate index and conversation children so changing the URL renders the intended screen.
+- Read-only payment views use src/data/payments.ts and the existing subscription helper for payments and agent_log; preserve backend actions and frozen teammate modules.
 
 ## Team rules
 
