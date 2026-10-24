@@ -6,37 +6,36 @@ import { logDecision } from './live';
 async function admin(){const{ supabaseAdmin }=await import('@/integrations/supabase/client.server');return supabaseAdmin;}
 function requireId(value:string|undefined){if(!value||! /^[a-f0-9-]{36}$/i.test(value))throw new Error('Invalid record');return value;}
 function checked<T>(r:{data:T;error:{message:string}|null}){if(r.error)throw new Error(r.error.message);return r.data;}
-async function log(agent:string,action:string,detail:Record<string,string|number>={}) {const db=await admin();checked(await db.from('agent_log').insert({agent,action,detail}));}
-// All decision logging uses the live domain, which also exposes the public read model.
-void logDecision;
+async function log(agent:string,action:string,detail:Record<string,string|number>={}) {const db=await admin();await logDecision(agent,action,detail,db);}
+function required<T>(r:{data:T;error:{message:string}|null}):NonNullable<T>{if(r.error)throw new Error(r.error.message);if(r.data==null)throw new Error('Record not found');return r.data;}
 export async function handleAction(data:ActionInput,user:SupabaseClient<Database>,userId:string,request:Request):Promise<ActionResult>{
  if(data.action==='start'){
   if(data.party!=='artist'&&data.party!=='venue')throw new Error('Choose artist or venue');
-  const profile=checked(await user.from(data.party==='artist'?'artists':'venues').select('*').eq('user_id',userId).single());if(!profile)throw new Error('Create your profile first');
+  const profile=required(await user.from(data.party==='artist'?'artists':'venues').select('*').eq('user_id',userId).single());if(!profile)throw new Error('Create your profile first');
   const db=await admin();const key=data.party==='artist'?'artist_id':'venue_id';
   let thread=checked(await db.from('threads').select('*').eq('kind','manager').eq(key,profile.id).maybeSingle());
-  if(!thread){const inserted=await db.from('threads').insert({kind:'manager',[key]:profile.id}).select('*').single();if(inserted.error?.code==='23505')thread=checked(await db.from('threads').select('*').eq('kind','manager').eq(key,profile.id).single());else thread=checked(inserted);}
+  if(!thread){const inserted=await db.from('threads').insert({kind:'manager',...(data.party==='artist'?{artist_id:profile.id}:{venue_id:profile.id})}).select('*').single();if(inserted.error?.code==='23505')thread=required(await db.from('threads').select('*').eq('kind','manager').eq(key,profile.id).single());else thread=required(inserted);}
   if(!thread)throw new Error('Could not start Mack');
-  const count=checked(await db.from('messages').select('id').eq('thread_id',thread.id).limit(1));
+  const count=required(await db.from('messages').select('id').eq('thread_id',thread.id).limit(1));
   if(!count.length){const {mackTurn}=await import('./mack.server');await mackTurn(thread.id,data.party,profile.id,request);}
   return{thread_id:thread.id};
  }
  if(data.action==='message'||data.action==='voice'){
-  const id=requireId(data.thread_id);const t=checked(await user.from('threads').select('*').eq('id',id).single());if(!t)throw new Error('Conversation not found');
+  const id=requireId(data.thread_id);const t=required(await user.from('threads').select('*').eq('id',id).single());if(!t)throw new Error('Conversation not found');
   const [a,v]=await Promise.all([t.artist_id?user.from('artists').select('id,user_id').eq('id',t.artist_id).single():Promise.resolve({data:null,error:null}),t.venue_id?user.from('venues').select('id,user_id').eq('id',t.venue_id).single():Promise.resolve({data:null,error:null})]);
   const party:Party=a.data?.user_id===userId?'artist':'venue';const owner=party==='artist'?a.data:v.data;if(!owner||owner.user_id!==userId)throw new Error('Not your conversation');
   if(data.action==='voice')throw new Error('Voice is coming online');
   const content=String(data.content??'').trim();if(!content||content.length>4000)throw new Error('Message must contain 1–4000 characters');
-  if(t.booking_id){const b=checked(await user.from('bookings').select('status').eq('id',t.booking_id).single());if(b.status==='cancelled'||b.status==='refunded'||b.status==='released')throw new Error('This booking is closed');}
-  const db=await admin();const msg=checked(await db.from('messages').insert({thread_id:id,sender_role:party,sender_id:userId,content}).select('id').single());
+  if(t.booking_id){const b=required(await user.from('bookings').select('status').eq('id',t.booking_id).single());if(b.status==='cancelled'||b.status==='refunded'||b.status==='released')throw new Error('This booking is closed');}
+  const db=await admin();const msg=required(await db.from('messages').insert({thread_id:id,sender_role:party,sender_id:userId,content}).select('id').single());
   const {mackTurn}=await import('./mack.server');try{await mackTurn(id,party,owner.id,request);}catch(e){await log('Mack','Reply unavailable',{thread_id:id});throw new Error(`Your message was saved, but Mack could not reply: ${e instanceof Error?e.message:'Please try again later'}`);}
   return{message_id:msg.id};
  }
  if(data.action==='match'){
-  const id=requireId(data.venue_id);const v=checked(await user.from('venues').select('*').eq('id',id).eq('user_id',userId).single());if(!v)throw new Error('Only the venue can find artists');
+  const id=requireId(data.venue_id);const v=required(await user.from('venues').select('*').eq('id',id).eq('user_id',userId).single());if(!v)throw new Error('Only the venue can find artists');
   if(!v.intake_completed_at)throw new Error('Finish intake first');
-  const db=await admin();const artists=checked(await db.from('artists').select('*').not('intake_completed_at','is',null));
-  const slots=checked(await db.from('availability').select('*'));const existing=checked(await db.from('suggestions').select('artist_id,status').eq('venue_id',id));
+  const db=await admin();const artists=required(await db.from('artists').select('*').not('intake_completed_at','is',null));
+  const slots=required(await db.from('availability').select('*'));const existing=required(await db.from('suggestions').select('artist_id,status').eq('venue_id',id));
   const {slotsOnDay}=await import('./availability');const today=new Date().toISOString().slice(0,10);const rows=[];
   for(const a of artists){if(a.user_id===userId||a.vetting==='rejected'||existing.some(s=>s.artist_id===a.id&&s.status!=='suggested'))continue;const overlap=a.genres.filter(g=>v.genres.includes(g));if(!overlap.length||(a.rate_usd??0)>(v.budget_usd??0))continue;
    let match:{date:string;start:string}|null=null;
@@ -46,20 +45,22 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
    if(match)rows.push({venue_id:id,artist_id:a.id,slot_date:match.date,slot_start:match.start,score:Math.min(99,65+overlap.length*8+(a.borough===v.borough?8:0)+(a.vetting==='verified'?5:0)),reason:`${overlap.join(' / ')} fits your room, with overlapping availability and a $${a.rate_usd} rate within budget.`});
   }
   if(rows.length)checked(await db.from('suggestions').upsert(rows,{onConflict:'venue_id,artist_id'}));await log('Mack','Artists matched',{count:rows.length});
-  const suggestions=checked(await user.from('suggestions').select('*,artists(*)').eq('venue_id',id).eq('status','suggested').order('score',{ascending:false}));return{suggestions:suggestions as Suggestion[]};
+  const suggestions=required(await user.from('suggestions').select('*,artists(*)').eq('venue_id',id).eq('status','suggested').order('score',{ascending:false}));return{suggestions:suggestions as Suggestion[]};
  }
  if(data.action==='decide'){
   const id=requireId(data.suggestion_id);if(data.decision!=='yes'&&data.decision!=='no')throw new Error('Choose yes or no');
-  const s=checked(await user.from('suggestions').select('*,venues(*),artists(*)').eq('id',id).single());if(s.venues?.user_id!==userId)throw new Error('Only the venue can choose');const db=await admin();
+  const s=required(await user.from('suggestions').select('*,venues(*),artists(*)').eq('id',id).single());if(s.venues?.user_id!==userId)throw new Error('Only the venue can choose');const db=await admin();
   if(s.status==='declined')throw new Error('Suggestion already declined');
   if(data.decision==='no'){checked(await db.from('suggestions').update({status:'declined'}).eq('id',id).eq('status','suggested'));await log('Mack','Suggestion declined');return{};}
-  let b=checked(await db.from('bookings').select('*').eq('suggestion_id',id).maybeSingle());if(!b)b=checked(await db.from('bookings').insert({venue_id:s.venue_id,artist_id:s.artist_id,suggestion_id:id,gig_date:s.slot_date,start_time:s.slot_start,set_length_min:s.artists?.set_length_min,offer_usd:s.artists?.rate_usd??s.venues.budget_usd,status:'negotiating'}).select('*').single());
-  let t=checked(await db.from('threads').select('*').eq('booking_id',b.id).maybeSingle());if(!t)t=checked(await db.from('threads').insert({kind:'booking',artist_id:b.artist_id,venue_id:b.venue_id,booking_id:b.id}).select('*').single());
+  let b=checked(await db.from('bookings').select('*').eq('suggestion_id',id).maybeSingle());if(!b)b=required(await db.from('bookings').insert({venue_id:s.venue_id,artist_id:s.artist_id,suggestion_id:id,gig_date:s.slot_date,start_time:s.slot_start,set_length_min:s.artists?.set_length_min,offer_usd:s.artists?.rate_usd??s.venues.budget_usd,status:'negotiating'}).select('*').single());
+  if(!b)throw new Error('Booking not found');
+  let t=checked(await db.from('threads').select('*').eq('booking_id',b.id).maybeSingle());if(!t)t=required(await db.from('threads').insert({kind:'booking',artist_id:b.artist_id,venue_id:b.venue_id,booking_id:b.id}).select('*').single());
+  if(!t)throw new Error('Thread not found');
   checked(await db.from('suggestions').update({status:'accepted'}).eq('id',id));
-  const msgs=checked(await db.from('messages').select('id').eq('thread_id',t.id).limit(1));if(!msgs.length)checked(await db.from('messages').insert({thread_id:t.id,sender_role:'agent',content:`Hey ${s.artists?.name} and ${s.venues.name}! Let's lock in ${b.gig_date} at ${b.start_time?.slice(0,5)}, ${b.set_length_min} minutes for $${b.offer_usd}. Are these terms right for both of you?`}));
+  const msgs=required(await db.from('messages').select('id').eq('thread_id',t.id).limit(1));if(!msgs.length)checked(await db.from('messages').insert({thread_id:t.id,sender_role:'agent',content:`Hey ${s.artists?.name} and ${s.venues.name}! Let's lock in ${b.gig_date} at ${b.start_time?.slice(0,5)}, ${b.set_length_min} minutes for $${b.offer_usd}. Are these terms right for both of you?`}));
   await log('Mack','Booking conversation opened');return{booking_id:b.id,thread_id:t.id};
  }
- const id=requireId(data.booking_id);const b=checked(await user.from('bookings').select('*,artists(user_id),venues(user_id)').eq('id',id).single());const party=b.venues?.user_id===userId?'venue':b.artists?.user_id===userId?'artist':null;if(!party)throw new Error('Not part of this booking');
+ const id=requireId(data.booking_id);const b=required(await user.from('bookings').select('*,artists(user_id),venues(user_id)').eq('id',id).single());const party=b.venues?.user_id===userId?'venue':b.artists?.user_id===userId?'artist':null;if(!party)throw new Error('Not part of this booking');
  const db=await admin();
  if(data.action==='confirm'){
   const result=checked(await user.rpc('settle_booking_confirmation',{_booking_id:id,_decline:!!data.decline}));await log('Mack',data.decline?'Booking cancelled':'Booking confirmation');return{status:result as BookingStatus};
@@ -67,7 +68,8 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
  if(data.action==='pay'){
   if(party!=='venue'||b.status!=='confirmed')throw new Error('Only the venue can pay a confirmed booking');
   let p=checked(await db.from('payments').select('*').eq('booking_id',id).maybeSingle());
-  if(!p)p=checked(await db.from('payments').insert({booking_id:id,...paymentAmounts(b.offer_usd??0)}).select('*').single());
+  if(!p)p=required(await db.from('payments').insert({booking_id:id,...paymentAmounts(b.offer_usd??0)}).select('*').single());
+  if(!p)throw new Error('Payment not found');
   await log('Payments','Checkout requested');return{checkout_url:p.checkout_url};
  }
  if(data.action==='report'){
@@ -88,11 +90,11 @@ export async function handlePublic(data:{action:'live'|'review'|'submitReview';t
  const review=checked(await db.from('expert_reviews').select('id,artist_id,verdict').eq('review_token',data.token).maybeSingle());if(!review)throw new Error('Review link not found');
  if(data.action==='submitReview'){
   const input=data.input;if(!input||!['verified','rejected'].includes(input.verdict)||!Array.isArray(input.room_fit)||input.room_fit.some(r=>!['Bar','Club','Music venue','Restaurant','Café','Rooftop'].includes(r))||typeof input.note!=='string'||input.note.length>500)throw new Error('Check your review');
-  const result=checked(await db.from('expert_reviews').update({verdict:input.verdict,room_fit:input.room_fit,note:input.note.trim()}).eq('id',review.id).is('verdict',null).select('id'));if(!result.length)throw new Error('This review was already submitted');
+  const result=required(await db.from('expert_reviews').update({verdict:input.verdict,room_fit:input.room_fit,note:input.note.trim()}).eq('id',review.id).is('verdict',null).select('id'));if(!result.length)throw new Error('This review was already submitted');
   checked(await db.from('artists').update({vetting:input.verdict,vetting_note:input.note.trim()}).eq('id',review.artist_id));await log('Expert booker','Artist review completed',{verdict:input.verdict});return{submitted:true};
  }
- const a=checked(await db.from('artists').select('id,name,background,genres,borough,rate_usd,set_length_min,photo_path,video_path').eq('id',review.artist_id).single());
- const slots=checked(await db.from('availability').select('*').eq('owner_type','artist').eq('owner_id',a.id));
+ const a=required(await db.from('artists').select('id,name,background,genres,borough,rate_usd,set_length_min,photo_path,video_path').eq('id',review.artist_id).single());
+ const slots=required(await db.from('availability').select('*').eq('owner_type','artist').eq('owner_id',a.id));
  const signed=async(path:string|null)=>{if(!path)return null;const r=await db.storage.from('media').createSignedUrl(path,600);const url=r.data?.signedUrl;if(!url)return null;return url.replace(process.env['SUPABASE_URL']??'__none__',import.meta.env['VITE_SUPABASE_URL']);};
  return{artist:{id:a.id,name:a.name,background:a.background,genres:a.genres,borough:a.borough,rate_usd:a.rate_usd,set_length_min:a.set_length_min},availability:slots,photo_url:await signed(a.photo_path),video_url:await signed(a.video_path),submitted:!!review.verdict};
 }

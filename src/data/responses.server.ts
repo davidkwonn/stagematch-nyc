@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, type ModelMessage } from "ai";
+import { streamText, type LanguageModel, type ModelMessage } from "ai";
 
 import {
   createLovableAiGatewayRunIdFetch,
@@ -22,7 +22,7 @@ export function createResponsesCall(
   });
   const reasoning = config.model !== "openai/chat-latest";
   const result = streamText({
-    model: provider.responses(config.model),
+    model: provider.responses(config.model) as unknown as LanguageModel,
     // AI SDK 6 lacks `instructions`: rename this key to `system` there.
     ...(instructions ? { instructions } : {}),
     messages,

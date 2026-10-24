@@ -9,9 +9,9 @@ export async function saveVoiceTurns(thread_id:string,turns:{speaker:'user'|'age
 // edge function: match
 export async function findArtists(venue_id:string):Promise<{suggestions:Suggestion[]}>{const r=await backendAction({data:{action:'match',venue_id}});return{suggestions:r.suggestions??[]};}
 // edge function: suggestion-decision
-export async function decideSuggestion(suggestion_id:string,decision:'yes'|'no'):Promise<{booking_id?:string;thread_id?:string}>{const r=await backendAction({data:{action:'decide',suggestion_id,decision}});return{booking_id:r.booking_id,thread_id:r.thread_id};}
+export async function decideSuggestion(suggestion_id:string,decision:'yes'|'no'):Promise<{booking_id?:string;thread_id?:string}>{const r=await backendAction({data:{action:'decide',suggestion_id,decision}});return{...(r.booking_id?{booking_id:r.booking_id}:{}),...(r.thread_id?{thread_id:r.thread_id}:{})};}
 // edge function: booking-confirm
-export async function confirmBooking(booking_id:string,decline?:boolean):Promise<{status:BookingStatus}>{const r=await backendAction({data:{action:'confirm',booking_id,decline}});if(!r.status)throw new Error('Booking not updated');return{status:r.status};}
+export async function confirmBooking(booking_id:string,decline?:boolean):Promise<{status:BookingStatus}>{const r=await backendAction({data:{action:'confirm',booking_id,decline:!!decline}});if(!r.status)throw new Error('Booking not updated');return{status:r.status};}
 // edge function: whop-checkout
 export async function payBooking(booking_id:string):Promise<{checkout_url:string|null}>{const r=await backendAction({data:{action:'pay',booking_id}});return{checkout_url:r.checkout_url??null};}
 // edge function: gig-outcome
