@@ -21,3 +21,7 @@
 - Voice transport is replaced only in src/features/voice/voice-client.ts; the stub must not claim a connected call.
 - Payment provider acknowledgements are required before held, released or refunded states; never simulate a charge or payout.
 - Keep inbox as an Outlet parent with separate index and conversation children so changing the URL renders the intended screen.
+
+## Team rules
+
+Team ownership, git flow and Edge Function conventions: `CLAUDE.md`. Spec: `docs/SPEC.md`.

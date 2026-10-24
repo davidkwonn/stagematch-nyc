@@ -1,1 +1,13 @@
 project_id = "luxpdpyxsywmggvewars"
+# Edge functions called without a user JWT (webhooks, cron, public pages, health check).
+[functions.health]
+verify_jwt = false
+
+[functions.whop-webhook]
+verify_jwt = false
+
+[functions.expert-review]
+verify_jwt = false
+
+[functions.terac-poll]
+verify_jwt = false
