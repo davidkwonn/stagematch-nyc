@@ -38,10 +38,12 @@ async function release(booking: Booking, payment: Payment) {
   if (!await moveBooking(booking.id, 'paid_held', 'performed')) throw new HttpError(409, 'gig already reported');
   await log('payments', 'gig_performed', { booking_id: booking.id });
 
-  // Real payout only for a real Whop payment; anything else is simulated and flagged.
+  // Real payout only for a real Whop payment, and only with a private thread to deliver the link;
+  // anything else is simulated and flagged.
+  const managerThreadId = await artistManagerThreadId(booking.artist_id);
   let link: Awaited<ReturnType<typeof createPayoutLink>> | null = null;
-  let reason = payment.whop_payment_id ? null : 'payment was simulated';
-  if (payment.whop_payment_id) {
+  let reason = !payment.whop_payment_id ? 'payment was simulated' : !managerThreadId ? 'no private thread for the artist' : null;
+  if (!reason) {
     try {
       link = await createPayoutLink(Number(payment.payout_usd), booking.id);
     } catch (e) {
@@ -64,7 +66,6 @@ async function release(booking: Booking, payment: Payment) {
       `(${usd(payment.fee_usd)}). Thank you both, I hope to book you together again.`);
   }
   // The claim link is redeemable by whoever holds it, so it goes only to the artist's own thread.
-  const managerThreadId = await artistManagerThreadId(booking.artist_id);
   if (managerThreadId) {
     await postAgentMessage(managerThreadId, link
       ? `Your pay for ${booking.venue.name} is ready: ${usd(payment.payout_usd)}. Collect it on Whop` +

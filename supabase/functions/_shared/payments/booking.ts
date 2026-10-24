@@ -32,9 +32,15 @@ export async function bookingThreadId(bookingId: string) {
   return (data?.id as string | undefined) ?? null;
 }
 
+// The artist's private thread with Mack, created if missing (seeded artists may have none).
 export async function artistManagerThreadId(artistId: string) {
-  const { data } = await db.from('threads').select('id').eq('artist_id', artistId).eq('kind', 'manager').maybeSingle();
-  return (data?.id as string | undefined) ?? null;
+  const find = () => db.from('threads').select('id').eq('artist_id', artistId).eq('kind', 'manager').maybeSingle();
+  const { data } = await find();
+  if (data) return data.id as string;
+  const { data: created } = await db.from('threads').insert({ kind: 'manager', artist_id: artistId }).select('id').maybeSingle();
+  if (created) return created.id as string;
+  const { data: raced } = await find(); // lost a race on the one-manager-thread index
+  return (raced?.id as string | undefined) ?? null;
 }
 
 // Returns false when the booking was not in `from` (someone else already moved it).

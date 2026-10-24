@@ -37,14 +37,15 @@ serve(async req => {
     return json({ checkout_url: null });
   }
 
-  // Back to the booking thread after paying. TODO(ui): confirm the inbox route with the Lovable owner.
+  // Back to the booking thread after paying (no redirect until APP_URL is set).
+  // TODO(ui): confirm the inbox route with the Lovable owner.
   const threadId = await bookingThreadId(booking.id);
-  const appUrl = Deno.env.get('APP_URL') ?? '';
+  const appUrl = Deno.env.get('APP_URL')?.replace(/\/$/, '');
   const checkout = await createCheckout({
     bookingId: booking.id,
     title: `Stagehand: ${booking.artist.name} at ${booking.venue.name}, ${when(booking.gig_date)}`,
     amountUsd: amount,
-    redirectUrl: threadId ? `${appUrl}/inbox/${threadId}` : appUrl,
+    redirectUrl: appUrl && (threadId ? `${appUrl}/inbox/${threadId}` : appUrl),
   });
   await upsert({ whop_checkout_id: checkout.id, checkout_url: checkout.url });
   await log('payments', 'checkout_created', { booking_id: booking.id, whop_checkout_id: checkout.id, ...terms });

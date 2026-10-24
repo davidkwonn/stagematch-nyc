@@ -21,11 +21,11 @@ function companyId() {
 }
 
 // One-time hosted checkout. Its metadata is copied onto the payment, so the webhook finds the booking.
-export async function createCheckout(o: { bookingId: string; title: string; amountUsd: number; redirectUrl: string }) {
+export async function createCheckout(o: { bookingId: string; title: string; amountUsd: number; redirectUrl?: string }) {
   const checkout = await whop().checkoutConfigurations.create({
     account_id: companyId(),
     metadata: { booking_id: o.bookingId },
-    redirect_url: o.redirectUrl,
+    ...(o.redirectUrl && { redirect_url: o.redirectUrl }),
     plan: { title: o.title, plan_type: 'one_time', initial_price: o.amountUsd, currency: 'usd' },
   });
   if (!checkout.purchase_url) throw new Error('Whop returned no purchase_url');
