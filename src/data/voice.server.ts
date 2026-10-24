@@ -43,7 +43,7 @@ async function processTurns(input:unknown,delegationId:string|undefined,threadId
  try{r=await mackTurn(threadId,party,ownerId,request,{post:false,source:'voice'});}
  catch(e){await logDecision('Mack','Voice backend unavailable',{error:e instanceof Error?e.message:String(e)},db);
   return delegationId?{say:'The backend could not save that just now. Tell the user plainly and ask them to repeat it.'}:{};}
- const note=[r.saved.length&&`Saved: ${r.saved.join('; ')}.`,r.intakeCompleted&&'Intake complete: the calendar is ready.',r.matches.length&&`Top artists, also posted in the chat: ${r.matches.join(', ')}.`,!r.intakeCompleted&&r.missing.length&&`Still missing: ${r.missing.join(', ')}.`].filter(Boolean).join(' ');
+ const note=[r.saved.length&&`Saved: ${r.saved.join('; ')}.`,r.intakeCompleted&&(party==='venue'?'Intake complete: the calendar is ready. Close the call as your instructions say.':'Intake complete: the calendar is ready. The profile now goes to venues looking for artists and to expert bookers for review; booking requests will arrive in the Inbox. Close the call as your instructions say.'),r.matches.length&&`Top artists for their nights, now on their screen (Home) and in the chat: ${r.matches.join(' | ')}`,!r.intakeCompleted&&r.missing.length&&`Still missing: ${r.missing.join(', ')}.`].filter(Boolean).join(' ');
  await logDecision('Mack','Voice turns processed',{saved:r.saved.length,delegated:!!delegationId,intake_completed:r.intakeCompleted},db);
  if(delegationId)return{say:r.reply||note||'Nothing new to save.',...(note?{note}:{})};
  return r.saved.length||r.intakeCompleted?{note}:{};

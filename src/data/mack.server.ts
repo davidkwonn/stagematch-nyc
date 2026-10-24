@@ -82,7 +82,8 @@ async function presentMatches(threadId:string,venueId:string){
  const lines=top.map((s,i)=>`${i+1}. ${s.artists?.name??'Artist'}${s.slot_date?`, free ${dayLabel(s.slot_date)}${s.slot_start?` at ${timeLabel(s.slot_start)}`:''}`:''}. ${s.reason}`);
  await db.from('messages').insert({thread_id:threadId,sender_role:'agent',content:`Your calendar is ready. Here are your top ${top.length} artists for those nights:\n${lines.join('\n')}\nSay yes or no to each on your Home tab.`});
  await logDecision('Mack','Top artists presented',{count:top.length},db);
- return top.map(s=>s.artists?.name??'Artist');
+ // Spoken by the voice at the end of the call: who, why, when, and whether expert bookers verified them.
+ return top.map(s=>`${s.artists?.name??'Artist'} (${s.reason}${s.slot_date?` Free ${dayLabel(s.slot_date)}${s.slot_start?` at ${timeLabel(s.slot_start)}`:''}.`:''}${s.artists?.vetting==='verified'?' Verified by expert bookers.':''})`);
 }
 // Artist intake done: send the profile to expert bookers (Terac) through the vetting Edge Function, if deployed.
 async function submitForVetting(artistId:string){

@@ -28,7 +28,7 @@ export async function matchVenue(id:string,userId?:string){
   const keep=new Set(ranked.map(r=>r.artist_id));const stale=cards.filter(s=>s.status==='suggested'&&!keep.has(s.artist_id)).map(s=>s.id);
   if(stale.length)checked(await db.from('suggestions').delete().in('id',stale).eq('status','suggested'));
   await log('Mack','Artists matched',{count:ranked.length,dropped:stale.length,considered:artistRows.length,ms:Date.now()-started});
-  return required(await db.from('suggestions').select('*,artists(name)').eq('venue_id',id).eq('status','suggested').order('score',{ascending:false}));
+  return required(await db.from('suggestions').select('*,artists(name,vetting)').eq('venue_id',id).eq('status','suggested').order('score',{ascending:false}));
 }
 export async function handleAction(data:ActionInput,user:SupabaseClient<Database>,userId:string,request:Request):Promise<ActionResult>{
  if(data.action==='start'){
