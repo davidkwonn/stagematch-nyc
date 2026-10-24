@@ -11,17 +11,13 @@ Dry runs at 16:00 and 17:00. Fix only what breaks the happy path. Keep `/live` o
 
 ## 2. Before the demo (checklist)
 
-1. **Close the review-token hole.** Paste into Lovable:
-   > Add a migration: revoke select on public.expert_reviews from authenticated; then grant select (id, created_at, artist_id, terac_opportunity_id, verdict, room_fit, note) on public.expert_reviews to authenticated. Also create unique index one_open_review_per_artist on public.expert_reviews (artist_id) where verdict is null. Don't change any other table, and keep the review page working, since it reads reviews with the service role.
-2. **Launch Terac** (answers take hours). The quote is already requested:
+1. **Review-token hole: closed.** Lovable's migration `0003_vetting_privacy` is applied.
+2. **Terac: live.** Opportunity `lb6fo5yxd9rghj2fnhc4i98a` was launched at 15:50 for $18. One NYC booker reviews 5 artists on `https://gigmatch-nyc-stage.lovable.app/review/<token>`, and verdicts land on the artist through the review page. When the booker finishes, approve the submission so they get paid:
    ```bash
-   npx -y deno@2 run -A --env-file=.env.local scripts/terac-launch.ts status bm0gd438ua2kes9f3adwim19
+   npx -y deno@2 run -A --env-file=.env.local scripts/terac-launch.ts submissions lb6fo5yxd9rghj2fnhc4i98a
+   npx -y deno@2 run -A --env-file=.env.local scripts/terac-launch.ts approve <submission_id>
    ```
-   Then create the draft with the published app URL and up to 10 review tokens. Ask Lovable for the tokens with: *"List review_token and artist name from expert_reviews where verdict is null."* Add `--confirm` once the draft looks right, because confirming spends money:
-   ```bash
-   npx -y deno@2 run -A --env-file=.env.local scripts/terac-launch.ts launch \
-     --app-url https://<published-app> --tokens <t1>,<t2>,… --feasibility bm0gd438ua2kes9f3adwim19
-   ```
+   Two review tokens are still unused (`b1a143f10cd043b7adffdd3e484b9279`, `174cac4c649a4f4eaf7be34df962da03`). Open one on stage to show the review page.
 3. **Warm up.** As the demo venue, tap "Find artists" once, so the first call on stage is fast.
 
 ## 3. Accounts

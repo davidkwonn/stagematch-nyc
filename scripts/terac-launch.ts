@@ -3,6 +3,8 @@
 //
 //   deno run -A --env-file=.env.local scripts/terac-launch.ts price [--artists 10] [--reviewers 1]
 //   deno run -A --env-file=.env.local scripts/terac-launch.ts status <feasibility_id>
+//   deno run -A --env-file=.env.local scripts/terac-launch.ts submissions <opportunity_id>
+//   deno run -A --env-file=.env.local scripts/terac-launch.ts approve <submission_id>
 //   deno run -A --env-file=.env.local scripts/terac-launch.ts launch --app-url https://<app> --tokens t1,t2,... \
 //        [--reviewers 1] [--feasibility <id>] [--confirm]
 //
@@ -47,7 +49,14 @@ const PANEL =
   'music venues or restaurants in NYC now or in the last two years. Exclude people with no booking experience.';
 
 type Feasibility = { id: string; status: string; costPerParticipant: number | null; dashboard_url?: string | null };
-type Opportunity = { id: string; status: string; dashboard_url?: string | null; draft_editor?: string | null };
+type Opportunity = {
+  id: string;
+  status: string;
+  dashboard_url?: string | null;
+  draft_editor?: string | null;
+  pricing?: unknown;
+  funding?: unknown;
+};
 
 async function price() {
   const artists = intFlag('artists', 10);
@@ -117,6 +126,9 @@ async function launch() {
   });
   console.log(`draft opportunity ${draft.id}: ${draft.status}`);
   if (draft.draft_editor ?? draft.dashboard_url) console.log(draft.draft_editor ?? draft.dashboard_url);
+  // `pricing` = incentive × participants + platform fee; `funding` says whether the balance covers it.
+  console.log('pricing:', JSON.stringify(draft.pricing ?? null));
+  console.log('funding:', JSON.stringify(draft.funding ?? null));
   if (!Deno.args.includes('--confirm')) {
     console.log('Not launched. Review the draft, then re-run with --confirm to launch (this spends money).');
     return;
@@ -126,8 +138,26 @@ async function launch() {
   if (live.dashboard_url) console.log(live.dashboard_url);
 }
 
+type Submission = { id: string; status: string; participant_name: string | null; updated_at: string };
+
+// Who has applied, worked, or finished: approve the ones in `awaiting_review` to pay the booker.
+async function submissions(opportunityId: string | undefined) {
+  if (!opportunityId) throw new Error('usage: submissions <opportunity_id>');
+  const list = (await terac<{ data: Submission[] }>('GET', `/opportunities/${opportunityId}/submissions`)).data ?? [];
+  if (!list.length) console.log('no submissions yet');
+  for (const s of list) console.log(`${s.id}  ${s.status.padEnd(16)} ${s.participant_name ?? ''}  ${s.updated_at}`);
+}
+
+async function approve(submissionId: string | undefined) {
+  if (!submissionId) throw new Error('usage: approve <submission_id>');
+  const s = await terac<{ id: string; status: string }>('POST', `/submissions/${submissionId}/approve`, {});
+  console.log(`submission ${s.id}: ${s.status}`);
+}
+
 const command = Deno.args[0];
 if (command === 'price') await price();
 else if (command === 'status') await status(Deno.args[1]);
 else if (command === 'launch') await launch();
-else console.log('usage: price | status <id> | launch --app-url … --tokens … [--confirm]');
+else if (command === 'submissions') await submissions(Deno.args[1]);
+else if (command === 'approve') await approve(Deno.args[1]);
+else console.log('usage: price | status <id> | launch --app-url … --tokens … [--confirm] | submissions <opp_id> | approve <submission_id>');
