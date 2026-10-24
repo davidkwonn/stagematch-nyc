@@ -251,6 +251,24 @@ export type Database = {
           },
         ]
       }
+      do_not_contact: {
+        Row: {
+          created_at: string
+          email: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       expert_reviews: {
         Row: {
           artist_id: string
@@ -367,6 +385,143 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      outreach_leads: {
+        Row: {
+          bio_snippet: string | null
+          borough: string | null
+          contact_type: string
+          contacted_at: string | null
+          created_at: string
+          email: string | null
+          found_by_query: string | null
+          genre: string | null
+          id: string
+          kind: string
+          name: string
+          score: number
+          source: string
+          source_url: string
+          status: string
+          venue_type: string | null
+        }
+        Insert: {
+          bio_snippet?: string | null
+          borough?: string | null
+          contact_type: string
+          contacted_at?: string | null
+          created_at?: string
+          email?: string | null
+          found_by_query?: string | null
+          genre?: string | null
+          id?: string
+          kind: string
+          name: string
+          score?: number
+          source: string
+          source_url: string
+          status?: string
+          venue_type?: string | null
+        }
+        Update: {
+          bio_snippet?: string | null
+          borough?: string | null
+          contact_type?: string
+          contacted_at?: string | null
+          created_at?: string
+          email?: string | null
+          found_by_query?: string | null
+          genre?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          score?: number
+          source?: string
+          source_url?: string
+          status?: string
+          venue_type?: string | null
+        }
+        Relationships: []
+      }
+      outreach_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          lead_id: string
+          sent_at: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_runs: {
+        Row: {
+          accepted: number
+          contact_form: number
+          drafted: number
+          error: string | null
+          finished_at: string | null
+          id: string
+          kind: string
+          queries: Json
+          raw_results: number
+          rejected: Json
+          started_at: string
+        }
+        Insert: {
+          accepted?: number
+          contact_form?: number
+          drafted?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          kind: string
+          queries?: Json
+          raw_results?: number
+          rejected?: Json
+          started_at?: string
+        }
+        Update: {
+          accepted?: number
+          contact_form?: number
+          drafted?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          queries?: Json
+          raw_results?: number
+          rejected?: Json
+          started_at?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {
