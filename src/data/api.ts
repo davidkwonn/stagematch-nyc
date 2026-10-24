@@ -4,8 +4,10 @@ import type { Party, BookingStatus, Suggestion, ReviewInput } from './types';
 export async function startMack(party:Party):Promise<{thread_id:string}>{const r=await backendAction({data:{action:'start',party}});return{thread_id:r.thread_id??''};}
 // edge function: mack-chat
 export async function sendMessage(thread_id:string,content:string):Promise<{message_id:string}>{const r=await backendAction({data:{action:'message',thread_id,content}});return{message_id:r.message_id??''};}
-// edge function: voice-turns
-export async function saveVoiceTurns(thread_id:string,turns:{speaker:'user'|'agent';text:string}[]):Promise<{ok:true}>{await backendAction({data:{action:'voice',thread_id,turns}});return{ok:true};}
+// edge function: voice-session
+export async function startVoiceSession(thread_id:string,sdp:string):Promise<{sdp:string;greeting:string}>{const r=await backendAction({data:{action:'voiceSession',thread_id,sdp}});if(!r.sdp)throw new Error('Voice could not connect');return{sdp:r.sdp,greeting:r.greeting??''};}
+// edge function: voice-turns — saves voice turns; with delegation_id, returns what Mack's voice should say (`say`), otherwise an optional backend note
+export async function saveVoiceTurns(thread_id:string,turns:{speaker:'user'|'agent';text:string}[],delegation_id?:string):Promise<{ok:true;say?:string;note?:string}>{const r=await backendAction({data:{action:'voice',thread_id,turns,...(delegation_id?{delegation_id}:{})}});return{ok:true,...(r.say?{say:r.say}:{}),...(r.note?{note:r.note}:{})};}
 // edge function: match
 export async function findArtists(venue_id:string):Promise<{suggestions:Suggestion[]}>{const r=await backendAction({data:{action:'match',venue_id}});return{suggestions:r.suggestions??[]};}
 // edge function: suggestion-decision

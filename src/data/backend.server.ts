@@ -16,6 +16,20 @@ async function assertNightFree(db:SupabaseClient<Database>,artistId:string,venue
  const hit=checked(await q)?.[0];if(!hit)return;
  throw new Error(hit.artist_id===artistId?`${artistName} is already booked that night. Ask Mack for another date.`:`${venueName==='you'?'You already have':venueName+' already has'} a gig that night. Ask Mack for another date.`);
 }
+// Ranks artists for a venue and upserts suggestions. Used by the UI (match) and by Mack when a venue finishes intake.
+export async function matchVenue(id:string,userId?:string){
+  const started=Date.now();const db=await admin();const today=todayNY();const v=required(await db.from('venues').select('*').eq('id',id).single());
+  const [artists,slots,existing,booked]=await Promise.all([db.from('artists').select('id,user_id,borough,genres,rate_usd,start_date,vetting').not('intake_completed_at','is',null),db.from('availability').select('owner_type,owner_id,kind,date,weekday,start_time,end_time'),db.from('suggestions').select('id,artist_id,status').eq('venue_id',id),db.from('bookings').select('artist_id,venue_id,gig_date').in('status',[...BOOKED_STATUSES]).gte('gig_date',today)]);
+  const artistRows=required(artists).filter(a=>a.user_id!==userId);const slotRows=required(slots);const cards=required(existing);const nights=bookedNights(required(booked));
+  // Our ranking (src/data/matching.ts): shared evenings over 6 weeks, genres, pay fit, borough, Terac verification; never a booked night.
+  const ranked=rank({venue:v,venueAvailability:slotRows.filter(s=>s.owner_type==='venue'&&s.owner_id===id),artists:artistRows,artistAvailability:slotRows.filter(s=>s.owner_type==='artist'),exclude:new Set(cards.filter(s=>s.status!=='suggested').map(s=>s.artist_id)),today,venueBooked:nights.venue.get(id),artistBooked:nights.artist});
+  // Status is left out so a card the venue answers meanwhile keeps its answer; new rows default to 'suggested'.
+  if(ranked.length)checked(await db.from('suggestions').upsert(ranked.map(r=>({...r,venue_id:id})),{onConflict:'venue_id,artist_id'}));
+  const keep=new Set(ranked.map(r=>r.artist_id));const stale=cards.filter(s=>s.status==='suggested'&&!keep.has(s.artist_id)).map(s=>s.id);
+  if(stale.length)checked(await db.from('suggestions').delete().in('id',stale).eq('status','suggested'));
+  await log('Mack','Artists matched',{count:ranked.length,dropped:stale.length,considered:artistRows.length,ms:Date.now()-started});
+  return required(await db.from('suggestions').select('*,artists(name)').eq('venue_id',id).eq('status','suggested').order('score',{ascending:false}));
+}
 export async function handleAction(data:ActionInput,user:SupabaseClient<Database>,userId:string,request:Request):Promise<ActionResult>{
  if(data.action==='start'){
   if(data.party!=='artist'&&data.party!=='venue')throw new Error('Choose artist or venue');
@@ -28,11 +42,11 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
   if(!count.length){const {mackTurn}=await import('./mack.server');await mackTurn(thread.id,data.party,profile.id,request);}
   return{thread_id:thread.id};
  }
- if(data.action==='message'||data.action==='voice'){
+ if(data.action==='message'||data.action==='voice'||data.action==='voiceSession'){
   const id=requireId(data.thread_id);const t=required(await user.from('threads').select('*').eq('id',id).single());if(!t)throw new Error('Conversation not found');
   const [a,v]=await Promise.all([t.artist_id?user.from('artists').select('id,user_id').eq('id',t.artist_id).single():Promise.resolve({data:null,error:null}),t.venue_id?user.from('venues').select('id,user_id').eq('id',t.venue_id).single():Promise.resolve({data:null,error:null})]);
   const party:Party=a.data?.user_id===userId?'artist':'venue';const owner=party==='artist'?a.data:v.data;if(!owner||owner.user_id!==userId)throw new Error('Not your conversation');
-  if(data.action==='voice')throw new Error('Voice is coming online');
+  if(data.action==='voice'||data.action==='voiceSession'){const {handleVoice}=await import('./voice.server');return handleVoice(data,id,party,owner.id,userId,request);}
   const content=String(data.content??'').trim();if(!content||content.length>4000)throw new Error('Message must contain 1–4000 characters');
   if(t.booking_id){const b=required(await user.from('bookings').select('status').eq('id',t.booking_id).single());if(b.status==='cancelled'||b.status==='refunded'||b.status==='released')throw new Error('This booking is closed');}
   const db=await admin();const msg=required(await db.from('messages').insert({thread_id:id,sender_role:party,sender_id:userId,content}).select('id').single());
@@ -42,16 +56,7 @@ export async function handleAction(data:ActionInput,user:SupabaseClient<Database
  if(data.action==='match'){
   const id=requireId(data.venue_id);const v=required(await user.from('venues').select('*').eq('id',id).eq('user_id',userId).single());if(!v)throw new Error('Only the venue can find artists');
   if(!v.intake_completed_at)throw new Error('Finish intake first');
-  const started=Date.now();const db=await admin();const today=todayNY();
-  const [artists,slots,existing,booked]=await Promise.all([db.from('artists').select('id,user_id,borough,genres,rate_usd,start_date,vetting').not('intake_completed_at','is',null),db.from('availability').select('owner_type,owner_id,kind,date,weekday,start_time,end_time'),db.from('suggestions').select('id,artist_id,status').eq('venue_id',id),db.from('bookings').select('artist_id,venue_id,gig_date').in('status',[...BOOKED_STATUSES]).gte('gig_date',today)]);
-  const artistRows=required(artists).filter(a=>a.user_id!==userId);const slotRows=required(slots);const cards=required(existing);const nights=bookedNights(required(booked));
-  // Our ranking (src/data/matching.ts): shared evenings over 6 weeks, genres, pay fit, borough, Terac verification; never a booked night.
-  const ranked=rank({venue:v,venueAvailability:slotRows.filter(s=>s.owner_type==='venue'&&s.owner_id===id),artists:artistRows,artistAvailability:slotRows.filter(s=>s.owner_type==='artist'),exclude:new Set(cards.filter(s=>s.status!=='suggested').map(s=>s.artist_id)),today,venueBooked:nights.venue.get(id),artistBooked:nights.artist});
-  // Status is left out so a card the venue answers meanwhile keeps its answer; new rows default to 'suggested'.
-  if(ranked.length)checked(await db.from('suggestions').upsert(ranked.map(r=>({...r,venue_id:id})),{onConflict:'venue_id,artist_id'}));
-  const keep=new Set(ranked.map(r=>r.artist_id));const stale=cards.filter(s=>s.status==='suggested'&&!keep.has(s.artist_id)).map(s=>s.id);
-  if(stale.length)checked(await db.from('suggestions').delete().in('id',stale).eq('status','suggested'));
-  await log('Mack','Artists matched',{count:ranked.length,dropped:stale.length,considered:artistRows.length,ms:Date.now()-started});
+  await matchVenue(id,userId);
   const suggestions=required(await user.from('suggestions').select('*,artists(*)').eq('venue_id',id).eq('status','suggested').order('score',{ascending:false}));return{suggestions:suggestions as Suggestion[]};
  }
  if(data.action==='decide'){

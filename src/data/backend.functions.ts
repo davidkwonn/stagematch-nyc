@@ -2,8 +2,8 @@ import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import type { Party, BookingStatus, Suggestion, ReviewInput, Artist, Availability } from './types';
-export type ActionInput={action:'start'|'message'|'voice'|'match'|'decide'|'confirm'|'pay'|'report';party?:Party;thread_id?:string;content?:string;turns?:{speaker:'user'|'agent';text:string}[];venue_id?:string;suggestion_id?:string;decision?:'yes'|'no';booking_id?:string;decline?:boolean;performed?:boolean};
-export type ActionResult={thread_id?:string;message_id?:string;suggestions?:Suggestion[];booking_id?:string;status?:BookingStatus;checkout_url?:string|null};
+export type ActionInput={action:'start'|'message'|'voice'|'voiceSession'|'match'|'decide'|'confirm'|'pay'|'report';party?:Party;thread_id?:string;content?:string;turns?:{speaker:'user'|'agent';text:string}[];sdp?:string;delegation_id?:string;venue_id?:string;suggestion_id?:string;decision?:'yes'|'no';booking_id?:string;decline?:boolean;performed?:boolean};
+export type ActionResult={thread_id?:string;message_id?:string;suggestions?:Suggestion[];booking_id?:string;status?:BookingStatus;checkout_url?:string|null;sdp?:string;greeting?:string;say?:string;note?:string};
 export const backendAction=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((input:ActionInput)=>input).handler(async({data,context}):Promise<ActionResult>=>{
  const {handleAction}=await import('./backend.server');
  return handleAction(data,context.supabase,context.userId,getRequest());
