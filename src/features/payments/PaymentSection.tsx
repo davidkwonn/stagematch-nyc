@@ -20,7 +20,7 @@ export function PaymentSection({ bookingId }: { bookingId: string }) {
       </> : <p className="text-xs text-muted-foreground">No payment yet.</p>}
       <h3 className="mt-5 text-xs font-bold">Timeline</h3>
       {events.isPending ? <p className="mt-2 text-xs text-muted-foreground">Loading activity…</p> : events.isError ? <p role="alert" className="mt-2 text-xs text-destructive">Payment activity unavailable.</p> : <ol className="mt-2 space-y-3">{events.data.filter(event => PAYMENT_EVENT_LABELS[event.action]).map(event => {
-        const simulated = event.detail && typeof event.detail === 'object' && !Array.isArray(event.detail) && event.detail.simulated === true;
+        const simulated = event.detail && typeof event.detail === 'object' && !Array.isArray(event.detail) && event.detail['simulated'] === true;
         return <li key={event.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-l border-border pl-3 text-xs"><time dateTime={event.at} className="text-muted-foreground">{new Date(event.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time><span>{PAYMENT_EVENT_LABELS[event.action]}</span>{simulated && <span className="border border-secondary px-1.5 py-0.5 text-[10px] text-secondary">Test mode</span>}</li>;
       })}</ol>}
       {events.data?.filter(event => PAYMENT_EVENT_LABELS[event.action]).length === 0 && <p className="mt-2 text-xs text-muted-foreground">No payment activity yet.</p>}
