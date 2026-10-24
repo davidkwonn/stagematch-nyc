@@ -73,7 +73,7 @@ async function approveFinished(reviews: Review[]) {
 }
 
 serve(async req => {
-  assertCron(req);
+  await assertCron(req);
   const { data, error } = await db.from('expert_reviews')
     .select('id, artist_id, created_at, terac_opportunity_id, terac_submission_id, verdict')
     .order('created_at', { ascending: false }).limit(200);

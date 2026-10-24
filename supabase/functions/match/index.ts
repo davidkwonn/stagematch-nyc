@@ -17,7 +17,7 @@ serve(async req => {
   const { venue_id } = await readJson<{ venue_id?: string }>(req);
   if (!isUuid(venue_id)) throw new HttpError(400, 'venue_id required');
 
-  if (!isServiceCall(req)) {
+  if (!(await isServiceCall(req))) {
     const caller = await getCaller(req);
     if (caller.venue?.id !== venue_id) throw new HttpError(403, 'not your venue');
   }

@@ -25,13 +25,13 @@ async function openReview(artistId: string) {
 serve(async req => {
   const { artist_id } = await readJson<{ artist_id?: string }>(req);
   if (!isUuid(artist_id)) throw new HttpError(400, 'artist_id required');
-  const service = isServiceCall(req);
+  const service = await isServiceCall(req);
   if (!service) {
     const caller = await getCaller(req);
     if (caller.artist?.id !== artist_id) throw new HttpError(403, 'not your profile');
   }
-  const appUrl = Deno.env.get('APP_URL');
-  if (!appUrl) throw new HttpError(500, 'APP_URL is not set');
+  // Needed only to send a real Terac booker to the review page; simulate mode works without it.
+  const appUrl = Deno.env.get('APP_URL') ?? '';
 
   const { data: artist } = await db.from('artists').select('id, name, vetting').eq('id', artist_id).maybeSingle();
   if (!artist) throw new HttpError(404, 'artist not found');
@@ -59,6 +59,10 @@ serve(async req => {
   // Already sent to a real Terac opportunity: don't pay twice.
   if (review.terac_opportunity_id && review.terac_opportunity_id !== SIMULATED_OPPORTUNITY) {
     return reply(review.terac_opportunity_id);
+  }
+  if (!appUrl) {
+    await log('vetting', 'terac_launch_failed', { artist_id, artist: artist.name, error: 'APP_URL is not set' });
+    return reply(null, { error: 'APP_URL is not set' });
   }
 
   // A shared opportunity launched by hand (MCP) collects links in its brief: just tag the row.

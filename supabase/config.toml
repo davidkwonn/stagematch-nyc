@@ -12,3 +12,7 @@ verify_jwt = false
 [functions.terac-poll]
 verify_jwt = false
 
+
+# Called by Mack server-side with a service key (may be a non-JWT sb_secret_ key); the function checks callers itself.
+[functions.terac-submit]
+verify_jwt = false
