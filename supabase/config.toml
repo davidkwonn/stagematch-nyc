@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.terac-poll]
 verify_jwt = false
+
+[functions.live-stats]
+verify_jwt = false
